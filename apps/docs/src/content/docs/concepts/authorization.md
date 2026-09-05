@@ -12,4 +12,5 @@ capacity for it. They are deliberately separate. `authz.check` combines the answ
 while the database functions resolve the effective permissions.
 
 Roles may inherit permissions. A change to a user's grants bumps `permissions_version`, which lets
-permission caches become unreachable rather than serving stale authorizations.
+permission caches become unreachable rather than serving stale authorizations. System roles are
+`owner`, `admin`, `member`, and `viewer`; each realm may add its own roles and permission graph.

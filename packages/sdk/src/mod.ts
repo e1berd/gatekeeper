@@ -1,218 +1,206 @@
 import type { RouterContractClient } from '@orpc/contract'
 import { createORPCClient } from '@orpc/client'
 import { RPCLink } from '@orpc/client/fetch'
-import type { contract } from '@gatekeeper/contract'
+import type { AuthResult, contract } from '@gatekeeper/contract'
 import { localStorageAdapter, memoryStorage, type TokenStorage } from './storage.ts'
 
 export type { TokenStorage }
 export { localStorageAdapter, memoryStorage }
 
-/** Every procedure in the contract, typed, callable as `client.auth.refresh(...)`. */
+/** Every procedure in the contract, available through {@link Gatekeeper.raw}. */
 export type GatekeeperClient = RouterContractClient<typeof contract>
 
 export interface GatekeeperOptions {
-  /** Base URL of the deployment, e.g. `https://auth.example.com`. A trailing slash is trimmed. */
-  url: string
-
-  /**
-   * Realm slug. Sent as a header rather than in the body, so it cannot be
-   * forged by editing a payload. The server falls back to `default`.
-   */
+  /** Realm slug. Defaults to the automatically created `master` realm. */
   realm?: string
 
-  /**
-   * Where tokens are kept. Defaults to `localStorage` in browsers and to memory
-   * elsewhere. On a server, pass a fresh {@link memoryStorage} per request so
-   * one user's session cannot leak into another's.
-   */
+  /** Storage for the access and refresh tokens. */
   storage?: TokenStorage
 
-  /**
-   * Seconds before expiry at which the access token is refreshed proactively,
-   * so a request is not lost to a token that expires in flight.
-   *
-   * @default 30
-   */
+  /** Seconds before expiry at which the access token is refreshed. @default 30 */
   refreshSkew?: number
+}
 
-  /**
-   * Called when the session ends and cannot be recovered: the refresh token
-   * expired, was revoked, or was detected as replayed. Redirect to your login
-   * page from here.
-   */
+export interface LegacyGatekeeperOptions extends GatekeeperOptions {
+  /** Base URL of the Gatekeeper deployment. */
+  url: string
+
+  /** Called when the session ends. Use the `signout` event on new clients. */
   onSignOut?: () => void
 }
 
 const ACCESS = 'access_token'
 const ACCESS_EXP = 'access_token_exp'
 const REFRESH = 'refresh_token'
+const MASTER_REALM = 'master'
 
 /**
- * Creates a typed Gatekeeper client.
+ * A browser or server-side client for one Gatekeeper deployment and realm.
  *
- * Every procedure is reachable directly — `gk.auth.signInPassword(...)`,
- * `gk.org.invite(...)` — with request and response types taken from the
- * contract package. There is no code generation, and no server code reaches
- * your bundle.
- *
- * On top of the raw RPC client it handles what every consumer would otherwise
- * rewrite: storing tokens, attaching the `Authorization` header, and refreshing
- * an expired access token. Concurrent calls during an expiry share one refresh
- * rather than each issuing their own.
- *
- * @example
- * ```ts
- * const gk = createGatekeeper({
- *   url: 'https://auth.example.com',
- *   realm: 'production',
- *   onSignOut: () => location.assign('/login'),
- * })
- *
- * const result = await gk.signIn({ email, password })
- * if (result.status === 'mfa_required') {
- *   await gk.mfa.verifyChallenge({
- *     challengeToken: result.challengeToken,
- *     factorId: result.factors[0].id,
- *     code,
- *   })
- * }
- * ```
+ * It persists tokens, attaches a bearer token to RPC calls, and coordinates refreshes. Auth flow
+ * methods are under {@link auth}; every unwrapped contract procedure remains under {@link raw}.
  */
-export function createGatekeeper(options: GatekeeperOptions) {
-  const storage =
-    options.storage ??
-    (typeof globalThis.localStorage !== 'undefined' ? localStorageAdapter() : memoryStorage())
-  const skew = options.refreshSkew ?? 30
+export class Gatekeeper extends EventTarget {
+  readonly raw: GatekeeperClient
+  readonly auth: {
+    signUp: (input: Parameters<GatekeeperClient['auth']['signUp']>[0]) => Promise<AuthResult>
+    signIn: (input: { email: string; password: string }) => Promise<AuthResult>
+    verifyOtp: (input: Parameters<GatekeeperClient['auth']['verifyOtp']>[0]) => Promise<AuthResult>
+    verifyPasskey: (
+      input: Parameters<GatekeeperClient['passkey']['authenticateVerify']>[0],
+    ) => Promise<AuthResult>
+    complete: (result: AuthResult) => Promise<AuthResult>
+    getSession: GatekeeperClient['auth']['getSession']
+    getMe: GatekeeperClient['profile']['get']
+    signOut: (scope?: 'local' | 'global') => Promise<void>
+    switchOrg: (
+      orgId: string | null,
+    ) => Promise<Awaited<ReturnType<GatekeeperClient['auth']['switchOrg']>>>
+    getAccessToken: () => Promise<string | null>
+    isAuthenticated: () => Promise<boolean>
+    oauth: {
+      start: GatekeeperClient['auth']['oauthStart']
+      exchange: (
+        input: Parameters<GatekeeperClient['auth']['oauthExchange']>[0],
+      ) => Promise<AuthResult>
+    }
+  }
+  readonly sso: {
+    discover: GatekeeperClient['sso']['discover']
+    start: GatekeeperClient['sso']['start']
+    providers: {
+      create: GatekeeperClient['sso']['create']
+      list: GatekeeperClient['sso']['list']
+      remove: GatekeeperClient['sso']['remove']
+      metadata: GatekeeperClient['sso']['metadata']
+    }
+  }
 
-  let refreshing: Promise<string | null> | null = null
+  #storage: TokenStorage
+  #skew: number
+  #refreshing: Promise<string | null> | null = null
+  #refreshClient: GatekeeperClient
 
-  async function currentAccessToken(): Promise<string | null> {
-    const token = await storage.get(ACCESS)
-    const expRaw = await storage.get(ACCESS_EXP)
+  constructor(url: string, options: GatekeeperOptions = {}) {
+    super()
+    this.#storage =
+      options.storage ??
+      (typeof globalThis.localStorage !== 'undefined' ? localStorageAdapter() : memoryStorage())
+    this.#skew = options.refreshSkew ?? 30
+
+    const origin = url.replace(/\/+$/, '')
+    const realmHeaders = () => ({ 'x-gatekeeper-realm': options.realm ?? MASTER_REALM })
+    const link = new RPCLink({
+      origin,
+      url: '/rpc',
+      headers: async () => {
+        const headers: Record<string, string> = realmHeaders()
+        const token = await this.#currentAccessToken()
+        if (token) headers.authorization = `Bearer ${token}`
+        return headers
+      },
+    })
+
+    this.raw = createORPCClient(link)
+    this.#refreshClient = createORPCClient(
+      new RPCLink({ origin, url: '/rpc', headers: realmHeaders }),
+    )
+    this.auth = {
+      signUp: async (input) => await this.#persistAuthentication(await this.raw.auth.signUp(input)),
+      signIn: async (input) =>
+        await this.#persistAuthentication(await this.raw.auth.signInPassword(input)),
+      verifyOtp: async (input) =>
+        await this.#persistAuthentication(await this.raw.auth.verifyOtp(input)),
+      verifyPasskey: async (input) =>
+        await this.#persistAuthentication(await this.raw.passkey.authenticateVerify(input)),
+      complete: async (result) => await this.#persistAuthentication(result),
+      getSession: this.raw.auth.getSession,
+      getMe: this.raw.profile.get,
+      signOut: async (scope = 'local') => await this.#signOut(scope),
+      switchOrg: async (orgId) => {
+        const result = await this.raw.auth.switchOrg({ orgId })
+        await this.#persist(result)
+        return result
+      },
+      getAccessToken: async () => await this.#currentAccessToken(),
+      isAuthenticated: async () => (await this.#currentAccessToken()) !== null,
+      oauth: {
+        start: this.raw.auth.oauthStart,
+        exchange: async (input) =>
+          await this.#persistAuthentication(await this.raw.auth.oauthExchange(input)),
+      },
+    }
+    this.sso = {
+      discover: this.raw.sso.discover,
+      start: this.raw.sso.start,
+      providers: {
+        create: this.raw.sso.create,
+        list: this.raw.sso.list,
+        remove: this.raw.sso.remove,
+        metadata: this.raw.sso.metadata,
+      },
+    }
+  }
+
+  async #currentAccessToken(): Promise<string | null> {
+    const token = await this.#storage.get(ACCESS)
+    const expRaw = await this.#storage.get(ACCESS_EXP)
     const exp = expRaw ? Number(expRaw) : 0
 
-    if (token && exp - skew > Date.now() / 1000) return token
-    if (!(await storage.get(REFRESH))) return null
+    if (token && exp - this.#skew > Date.now() / 1000) return token
+    if (!(await this.#storage.get(REFRESH))) return null
 
-    refreshing ??= doRefresh().finally(() => {
-      refreshing = null
+    this.#refreshing ??= this.#refresh().finally(() => {
+      this.#refreshing = null
     })
-    return refreshing
+    return await this.#refreshing
   }
 
-  async function persist(tokens: {
-    accessToken: string
-    expiresIn: number
-    refreshToken?: string
-  }) {
-    await storage.set(ACCESS, tokens.accessToken)
-    await storage.set(ACCESS_EXP, String(Math.floor(Date.now() / 1000) + tokens.expiresIn))
-    if (tokens.refreshToken) await storage.set(REFRESH, tokens.refreshToken)
+  async #persist(tokens: { accessToken: string; expiresIn: number; refreshToken?: string }) {
+    await this.#storage.set(ACCESS, tokens.accessToken)
+    await this.#storage.set(ACCESS_EXP, String(Math.floor(Date.now() / 1000) + tokens.expiresIn))
+    if (tokens.refreshToken) await this.#storage.set(REFRESH, tokens.refreshToken)
   }
 
-  async function clear() {
-    await storage.remove(ACCESS)
-    await storage.remove(ACCESS_EXP)
-    await storage.remove(REFRESH)
+  async #persistAuthentication(result: AuthResult): Promise<AuthResult> {
+    if (result.status === 'authenticated') await this.#persist(result.tokens)
+    return result
   }
 
-  async function doRefresh(): Promise<string | null> {
-    const refreshToken = await storage.get(REFRESH)
+  async #clear() {
+    await this.#storage.remove(ACCESS)
+    await this.#storage.remove(ACCESS_EXP)
+    await this.#storage.remove(REFRESH)
+  }
+
+  async #refresh(): Promise<string | null> {
+    const refreshToken = await this.#storage.get(REFRESH)
     if (!refreshToken) return null
 
     try {
-      const tokens = await raw.auth.refresh({ refreshToken })
-      await persist(tokens)
+      const tokens = await this.#refreshClient.auth.refresh({ refreshToken })
+      await this.#persist(tokens)
       return tokens.accessToken
     } catch {
-      await clear()
-      options.onSignOut?.()
+      await this.#clear()
+      this.dispatchEvent(new Event('signout'))
       return null
     }
   }
 
-  const link = new RPCLink({
-    origin: options.url.replace(/\/+$/, ''),
-    url: '/rpc',
-    headers: async () => {
-      const headers: Record<string, string> = {}
-      if (options.realm) headers['x-gatekeeper-realm'] = options.realm
-      const token = await currentAccessToken()
-      if (token) headers.authorization = `Bearer ${token}`
-      return headers
-    },
-  })
-
-  const raw: GatekeeperClient = createORPCClient(link)
-
-  return {
-    ...raw,
-
-    /**
-     * The untouched RPC client, without token persistence.
-     *
-     * An escape hatch for calls that must bypass the automatic refresh, or
-     * where you want to handle storage yourself.
-     */
-    raw,
-
-    /**
-     * Signs in with a password, storing the tokens on success.
-     *
-     * Returns the full result, so check `status` before assuming a session
-     * exists — the realm may demand MFA or a verified email first.
-     */
-    async signIn(input: { email: string; password: string }) {
-      const result = await raw.auth.signInPassword(input)
-      if (result.status === 'authenticated') await persist(result.tokens)
-      return result
-    },
-
-    /**
-     * Revokes the session and clears stored tokens.
-     *
-     * Local storage is cleared even when the server call fails, so a user can
-     * always sign out of a device. Pass `global` to end every session the user
-     * has anywhere.
-     */
-    async signOut(scope: 'local' | 'global' = 'local') {
-      try {
-        await raw.auth.signOut({ scope })
-      } finally {
-        await clear()
-        options.onSignOut?.()
-      }
-    },
-
-    /**
-     * Rebinds the access token to another organization.
-     *
-     * A token carries the roles of one active organization rather than a map of
-     * every membership, so switching re-mints it. The session and refresh token
-     * are untouched; this is not a re-login.
-     *
-     * @param orgId Organization to activate, or `null` for the global context —
-     *   the correct state for a user who belongs to none.
-     */
-    async switchOrg(orgId: string | null) {
-      const result = await raw.auth.switchOrg({ orgId })
-      await persist(result)
-      return result
-    },
-
-    /**
-     * Returns a valid access token, refreshing first when needed.
-     *
-     * Resolves to `null` instead of throwing when no usable session exists.
-     * Use it to authorize requests to your own API.
-     */
-    async getAccessToken() {
-      return await currentAccessToken()
-    },
-
-    /** Whether a usable session exists, refreshing once if the token has expired. */
-    async isAuthenticated() {
-      return (await currentAccessToken()) !== null
-    },
+  async #signOut(scope: 'local' | 'global') {
+    try {
+      await this.raw.auth.signOut({ scope })
+    } finally {
+      await this.#clear()
+      this.dispatchEvent(new Event('signout'))
+    }
   }
+}
+
+/** Creates a {@link Gatekeeper} using the pre-0.2 options-object API. */
+export function createGatekeeper(options: LegacyGatekeeperOptions): Gatekeeper {
+  const client = new Gatekeeper(options.url, options)
+  if (options.onSignOut) client.addEventListener('signout', options.onSignOut)
+  return client
 }

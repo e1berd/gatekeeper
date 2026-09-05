@@ -42,6 +42,16 @@ export const config = {
     from: Deno.env.get('MAIL_FROM') ?? 'no-reply@gatekeeper.local',
   },
 
+  s3: {
+    endpoint: Deno.env.get('S3_ENDPOINT') || null,
+    region: Deno.env.get('S3_REGION') ?? 'us-east-1',
+    accessKeyId: Deno.env.get('S3_ACCESS_KEY_ID') ?? '',
+    secretAccessKey: Deno.env.get('S3_SECRET_ACCESS_KEY') ?? '',
+    avatarBucket: Deno.env.get('S3_AVATAR_BUCKET') ?? 'gatekeeper-avatars',
+    publicUrl: Deno.env.get('S3_PUBLIC_URL') || null,
+    pathStyle: Deno.env.get('S3_PATH_STYLE') !== 'false',
+  },
+
   version: Deno.env.get('GATEKEEPER_VERSION') ?? '0.1.0',
 } as const
 

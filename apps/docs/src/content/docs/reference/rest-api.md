@@ -7,5 +7,5 @@ The REST contract is generated from `packages/contract` during `deno task docs:b
 exact specification served by this documentation build at [openapi.json](/openapi.json).
 
 The REST API is served below `/api/*`. The JavaScript SDK instead uses `/rpc/*`, preserving values
-that JSON cannot represent faithfully. Contract endpoints describe the intended API; in the current
-scaffold all but the health handler return `501 NOT_IMPLEMENTED`.
+that JSON cannot represent faithfully. Send the selected realm in `X-Gatekeeper-Realm` and access
+tokens in the `Authorization: Bearer <token>` header.

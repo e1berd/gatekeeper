@@ -18,7 +18,17 @@ function emit(node: Record<string, unknown>, path: string[], depth: number): str
     .join('\n')
 }
 
-const domains = ['auth', 'passkey', 'mfa', 'org', 'authz', 'sso', 'hooks', 'admin'] as const
+const domains = [
+  'auth',
+  'profile',
+  'passkey',
+  'mfa',
+  'org',
+  'authz',
+  'sso',
+  'hooks',
+  'admin',
+] as const
 
 for (const domain of domains) {
   const path = `./apps/server/src/router/${domain}.ts`

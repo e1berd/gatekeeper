@@ -19,7 +19,7 @@ export const resolveRealm = os.middleware(async ({ context, next }) => {
     return next({ context: { realm: context.realm, realmResolved: true } })
   }
 
-  const slug = context.headers.get('x-gatekeeper-realm') ?? 'default'
+  const slug = context.headers.get('x-gatekeeper-realm') ?? 'master'
   const realm = await resolveRealmBySlug(context.db, slug)
 
   if (!realm) {

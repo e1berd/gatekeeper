@@ -37,6 +37,8 @@ once, not in the file where it is re-read forever.
 **Formatting** is enforced by `deno fmt` and not negotiable per file: no semicolons, single quotes,
 100-column lines, 2-space indent.
 
+**SQL is lowercase.** Keywords, identifiers, functions and expressions in raw SQL all use lowercase.
+
 **File length: 350 lines.** `deno lint` fails past it. Exceed it only when splitting would genuinely
 hurt — a single generated file, or one cohesive schema — and expect to justify it.
 

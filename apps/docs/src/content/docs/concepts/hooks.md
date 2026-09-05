@@ -15,4 +15,5 @@ placed in the delivery outbox and retried with exponential backoff. A slow after
 therefore does not hold a database transaction open.
 
 Available hook points include `before_sign_up`, `after_sign_up`, `before_sign_in`, `after_sign_in`,
-`before_token_issue`, and organization and invitation events.
+`before_token_issue`, `before_org_create`, `after_org_create`, `after_invite_accepted`, and
+`before_password_change`.

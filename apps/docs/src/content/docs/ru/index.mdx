@@ -1,0 +1,25 @@
+---
+title: Gatekeeper
+description: Самостоятельно развёртываемая аутентификация и авторизация с ролевыми областями действия.
+---
+
+Gatekeeper — самостоятельная система управления идентификацией и доступом: аутентификация, сессии,
+passkeys, MFA, SSO и авторизация со scoped-ролями.
+
+Один контракт определяет три интерфейса: типизированный `/rpc/*` для JavaScript SDK, REST `/api/*`
+и `/form/*` для обычных HTML-форм с cookie-сессиями.
+
+## Быстрый старт
+
+```sh
+cp .env.example .env
+openssl rand -base64 32
+deno task up
+curl localhost:8080/healthz
+```
+
+Запишите сгенерированное значение в `GATEKEEPER_KEK`. Compose поднимает PostgreSQL, Redis,
+миграции и Gatekeeper; профиль `dev` добавляет Mailpit.
+
+Gatekeeper публикует OpenID discovery и JWKS для проверки токенов, но не является OIDC provider и
+не реализует SCIM.

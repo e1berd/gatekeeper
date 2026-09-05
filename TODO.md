@@ -133,7 +133,11 @@ Nothing else can be finished before this exists.
 
 - [ ] SMTP sender with retry, plus a dev path through Mailpit
 - [ ] Templates: verification, password reset, OTP, invitation, new-device alert
-- [ ] Per-realm branding and locale for those templates
+- [ ] Per-realm branding for these templates
+- [ ] Locale resolution for the server-rendered surfaces — email templates and `/form/*` pages —
+      from the realm default, overridden per request by `Accept-Language`. API error responses stay
+      locale-independent: they carry a stable `code` and the client owns the copy (see the errors
+      concept page)
 - [ ] Extend `/form/*`: `verify-email`, `reset-password`, `accept-invitation`, `mfa-challenge`
 - [ ] Endpoint issuing a CSRF token for callers that render pages server-side and cannot rely on
       `Origin`
@@ -185,9 +189,9 @@ deployment, and none of them is indexed for a time-ranged delete.
 
 - [ ] **Start** — what Gatekeeper is, when not to use it, five-minute `docker compose` walkthrough
 - [ ] **Concepts** — realms; users and identities; sessions, AAL and token rotation; roles, scopes
-      and inheritance; permissions versus entitlements; hooks. This is where the design rationale
-      lives: the no-comments rule means prose that would once have sat above a function belongs
-      here.
+      and inheritance; permissions versus entitlements; hooks; error codes and localization. This is
+      where the design rationale lives: the no-comments rule means prose that would once have sat
+      above a function belongs here.
 - [ ] **Guides** — password auth; passkeys; TOTP and recovery codes; social login; organizations and
       invitations; the workspace-on-signup flow as a worked example; HTML forms without JavaScript;
       writing a SQL hook; writing an HTTP hook

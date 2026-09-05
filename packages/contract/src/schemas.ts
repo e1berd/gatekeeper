@@ -4,7 +4,7 @@ export const Slug = z
   .string()
   .min(1)
   .max(64)
-  .regex(/^[a-z0-9][a-z0-9._-]*$/, 'must be lowercase alphanumeric with . _ -')
+  .regex(/^[a-z0-9][a-z0-9._-]*$/)
 
 export const Uuid = z.uuid()
 export const Email = z.email().max(320)
@@ -38,6 +38,7 @@ export const User = z.object({
   emailVerified: z.boolean(),
   phone: z.string().max(32).nullable(),
   phoneVerified: z.boolean(),
+  avatarUrl: z.url().nullable(),
   status: UserStatus,
   userWritableMetadata: z.record(z.string(), z.unknown()),
   serverOnlyMetadata: z.record(z.string(), z.unknown()),
@@ -91,6 +92,7 @@ export const AuthResult = z.discriminatedUnion('status', [
   }),
   z.object({ status: z.literal('verification_required'), reason: z.enum(['email', 'phone']) }),
 ])
+export type AuthResult = z.infer<typeof AuthResult>
 
 export const Role = z.object({
   id: Uuid,

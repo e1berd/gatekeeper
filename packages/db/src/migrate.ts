@@ -21,7 +21,7 @@ try {
   await migrate(db, { migrationsFolder: fromFileUrl(new URL('../drizzle', here)) })
   console.log('drizzle migrations applied')
 
-  for (const name of ['0100_authz.sql']) {
+  for (const name of ['0100_authz.sql', '0101_master_realm.sql']) {
     const sqlText = await Deno.readTextFile(new URL(`../sql/${name}`, here))
     await client.unsafe(sqlText)
     console.log(`applied ${name}`)

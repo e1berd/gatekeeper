@@ -21,7 +21,7 @@ export const HookEvent = z.enum([
 
 export const QualifiedFunctionName = z
   .string()
-  .regex(/^[a-z_][a-z0-9_]{0,62}\.[a-z_][a-z0-9_]{0,62}$/, 'must be schema.function')
+  .regex(/^[a-z_][a-z0-9_]{0,62}\.[a-z_][a-z0-9_]{0,62}$/)
 
 export const Hook = z.object({
   id: Uuid,

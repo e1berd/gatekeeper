@@ -1,0 +1,8 @@
+{
+  "name": "@gatekeeper/example-vue",
+  "private": true,
+  "exports": {},
+  "imports": {
+    "vue": "npm:vue@3.5.18"
+  }
+}

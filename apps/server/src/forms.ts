@@ -20,6 +20,9 @@ const MFA_CHALLENGE_TTL_SECONDS = 300
 const STATUS_SEE_OTHER_SO_REFRESH_CANNOT_RESUBMIT = 303
 const STATUS_METHOD_NOT_ALLOWED = 405
 const STATUS_NOT_FOUND = 404
+const STATUS_PAYLOAD_TOO_LARGE = 413
+
+const MAX_FORM_BODY_BYTES = 1024 * 1024
 
 const COOKIE_DOMAIN = Deno.env.get('COOKIE_DOMAIN') || undefined
 const COOKIES_REQUIRE_HTTPS = config.issuer.startsWith('https://')
@@ -66,7 +69,7 @@ function redirect(location: string, headers: Headers): Response {
 }
 
 function realmSlugFrom(request: Request): string {
-  return request.headers.get('x-gatekeeper-realm') ?? 'default'
+  return request.headers.get('x-gatekeeper-realm') ?? 'master'
 }
 
 function field(form: FormData, name: string): string {
@@ -136,6 +139,47 @@ function clearSession(headers: Headers): void {
   deleteCookie(headers, REFRESH_COOKIE, { path: '/', domain: COOKIE_DOMAIN })
 }
 
+function withCookieSession(request: Request, base: InitialContext): InitialContext {
+  const accessToken = getCookie(request.headers, ACCESS_COOKIE)
+  if (!accessToken) return base
+
+  const headers = new Headers(request.headers)
+  headers.set('authorization', `Bearer ${accessToken}`)
+  return { ...base, headers }
+}
+
+function metadataPatch(form: FormData): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  const displayName = field(form, 'display_name')
+  if (displayName) patch.displayName = displayName
+  const locale = field(form, 'locale')
+  if (locale) patch.locale = locale
+  return patch
+}
+
+async function handleProfileUpdate(
+  request: Request,
+  form: FormData,
+  headers: Headers,
+  context: InitialContext,
+): Promise<Response> {
+  const authedContext = withCookieSession(request, context)
+
+  const patch = metadataPatch(form)
+  if (Object.keys(patch).length > 0) {
+    await call(router.profile.update, { userWritableMetadata: patch }, { context: authedContext })
+  }
+
+  const avatar = form.get('avatar')
+  if (avatar instanceof File && avatar.size > 0) {
+    await call(router.profile.uploadAvatar, avatar, { context: authedContext })
+  } else if (field(form, 'remove_avatar') === 'true') {
+    await call(router.profile.removeAvatar, undefined, { context: authedContext })
+  }
+
+  return redirect(toAllowedRedirect(field(form, 'redirect_to'), config.issuer), headers)
+}
+
 async function submitCredentials(
   action: 'sign-up' | 'sign-in',
   form: FormData,
@@ -201,6 +245,11 @@ export async function handleForm(
     return new Response('Method not allowed', { status: STATUS_METHOD_NOT_ALLOWED })
   }
 
+  const declaredLength = Number(request.headers.get('content-length') ?? '0')
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_FORM_BODY_BYTES) {
+    return new Response('Payload too large', { status: STATUS_PAYLOAD_TOO_LARGE })
+  }
+
   const action = pathname.slice(FORM_PREFIX.length)
   const form = await request.formData()
   const headers = new Headers()
@@ -231,7 +280,9 @@ export async function handleForm(
           realm.settings.tokens,
         )
       case 'sign-out':
-        return await handleSignOut(form, headers, context)
+        return await handleSignOut(form, headers, withCookieSession(request, context))
+      case 'profile':
+        return await handleProfileUpdate(request, form, headers, context)
       default:
         return new Response('Not found', { status: STATUS_NOT_FOUND })
     }

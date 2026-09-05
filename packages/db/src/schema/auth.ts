@@ -46,6 +46,8 @@ export const users = authSchema.table(
       .notNull()
       .default({}),
 
+    avatarUrl: text('avatar_url'),
+
     permissionsVersion: integer('permissions_version').notNull().default(1),
 
     failedAttempts: integer('failed_attempts').notNull().default(0),

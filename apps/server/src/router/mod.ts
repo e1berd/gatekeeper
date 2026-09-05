@@ -1,5 +1,6 @@
 import { os } from '../middleware.ts'
 import { auth } from './auth.ts'
+import { profile } from './profile.ts'
 import { passkey } from './passkey.ts'
 import { mfa } from './mfa.ts'
 import { org } from './org.ts'
@@ -26,6 +27,17 @@ const health = os.health.handler(async ({ context }) => {
   }
 })
 
-export const router = os.router({ health, auth, passkey, mfa, org, authz, sso, hooks, admin })
+export const router = os.router({
+  health,
+  auth,
+  profile,
+  passkey,
+  mfa,
+  org,
+  authz,
+  sso,
+  hooks,
+  admin,
+})
 
 export type Router = typeof router
