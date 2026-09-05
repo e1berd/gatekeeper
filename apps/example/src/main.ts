@@ -30,8 +30,8 @@ createApp({
     const qrCode = ref('')
     const enrollment = ref<{ factorId: string } | null>(null)
     const recoveryCodes = ref<string[]>([])
-    const factors = ref<Awaited<ReturnType<Gatekeeper['raw']['mfa']['listFactors']>>['items']>([])
-    const passkeys = ref<Awaited<ReturnType<Gatekeeper['raw']['passkey']['list']>>['items']>([])
+    const factors = ref<Awaited<ReturnType<Gatekeeper['auth']['mfa']['listFactors']>>['items']>([])
+    const passkeys = ref<Awaited<ReturnType<Gatekeeper['auth']['passkeys']['list']>>['items']>([])
 
     function newClient() {
       const next = new Gatekeeper(url.value, { realm: realm.value || undefined })
@@ -81,8 +81,8 @@ createApp({
 
     async function loadSecurity() {
       const [nextFactors, nextPasskeys] = await Promise.all([
-        client.value.raw.mfa.listFactors(),
-        client.value.raw.passkey.list(),
+        client.value.auth.mfa.listFactors(),
+        client.value.auth.passkeys.list(),
       ])
       factors.value = nextFactors.items
       passkeys.value = nextPasskeys.items
@@ -127,7 +127,7 @@ createApp({
     async function sendOtp(event: SubmitEvent) {
       const data = new FormData(event.target as HTMLFormElement)
       await run(async () => {
-        const result = await client.value.raw.auth.signInOtp({
+        const result = await client.value.auth.requestOtp({
           channel: 'email',
           identifier: String(data.get('email')),
         })
@@ -153,7 +153,7 @@ createApp({
     async function requestReset(event: SubmitEvent) {
       const data = new FormData(event.target as HTMLFormElement)
       await run(async () => {
-        await client.value.raw.auth.requestPasswordReset({ email: String(data.get('email')) })
+        await client.value.auth.requestPasswordReset({ email: String(data.get('email')) })
         notice.value = 'Если учётная запись существует, на почту отправлена ссылка для сброса.'
       })
     }
@@ -161,7 +161,7 @@ createApp({
     async function resetPassword(event: SubmitEvent) {
       const data = new FormData(event.target as HTMLFormElement)
       await run(async () => {
-        await client.value.raw.auth.resetPassword({
+        await client.value.auth.resetPassword({
           token: resetToken.value,
           password: String(data.get('password')),
         })
@@ -175,12 +175,11 @@ createApp({
       const challenge = mfa.value
       if (!challenge?.factorId) return
       await run(async () => {
-        const result = await client.value.raw.mfa.verifyChallenge({
+        const result = await client.value.auth.mfa.verifyChallenge({
           challengeToken: challenge.challengeToken,
           factorId: challenge.factorId,
           code: String(data.get('code')),
         })
-        await client.value.auth.complete(result)
         mfa.value = null
         await receive(result)
       })
@@ -188,7 +187,7 @@ createApp({
 
     async function signInWithPasskey() {
       await run(async () => {
-        const challenge = await client.value.raw.passkey.authenticateOptions({})
+        const challenge = await client.value.auth.passkeys.authenticateOptions({})
         const response = await authenticatePasskey(challenge.options)
         await receive(
           await client.value.auth.verifyPasskey({ challengeId: challenge.challengeId, response }),
@@ -223,9 +222,9 @@ createApp({
 
     async function registerPasskey() {
       await run(async () => {
-        const challenge = await client.value.raw.passkey.registerOptions({ name: 'Этот браузер' })
+        const challenge = await client.value.auth.passkeys.registerOptions({ name: 'Этот браузер' })
         const response = await createPasskey(challenge.options)
-        await client.value.raw.passkey.registerVerify({
+        await client.value.auth.passkeys.registerVerify({
           challengeId: challenge.challengeId,
           response,
           name: 'Этот браузер',
@@ -237,7 +236,7 @@ createApp({
 
     async function enrollTotp() {
       await run(async () => {
-        const result = await client.value.raw.mfa.enrollTotp({ name: 'Authenticator' })
+        const result = await client.value.auth.mfa.enrollTotp({ name: 'Authenticator' })
         enrollment.value = { factorId: result.factorId }
         qrCode.value = result.qrCodeSvg
         screen.value = 'security'
@@ -250,7 +249,7 @@ createApp({
       const totpEnrollment = enrollment.value
       if (!totpEnrollment) return
       await run(async () => {
-        const result = await client.value.raw.mfa.verifyTotpEnrolment({
+        const result = await client.value.auth.mfa.verifyTotpEnrolment({
           factorId: totpEnrollment.factorId,
           code: String(data.get('code')),
         })

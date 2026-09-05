@@ -75,5 +75,5 @@ const { items } = await gk.sso.providers.list()
 
 The current contract also exposes `remove` and `metadata`. Keep create, secret rotation, enabling,
 domain assignment and deletion administrative; keep discovery and start safe for an unauthenticated
-sign-in screen. The untouched typed contract remains available as `gk.raw` for procedures not yet
-given a high-level SDK name.
+sign-in screen. Other public domains are available directly as `gk.org`, `gk.authz`, `gk.hooks` and
+`gk.admin`.

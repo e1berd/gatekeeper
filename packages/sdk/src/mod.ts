@@ -7,8 +7,23 @@ import { localStorageAdapter, memoryStorage, type TokenStorage } from './storage
 export type { TokenStorage }
 export { localStorageAdapter, memoryStorage }
 
-/** Every procedure in the contract, available through {@link Gatekeeper.raw}. */
+/** Every procedure in the Gatekeeper contract. */
 export type GatekeeperClient = RouterContractClient<typeof contract>
+
+type PasskeysApi = Omit<GatekeeperClient['passkey'], 'authenticateVerify'> & {
+  authenticateVerify: (
+    input: Parameters<GatekeeperClient['passkey']['authenticateVerify']>[0],
+  ) => Promise<AuthResult>
+}
+
+type MfaApi = Omit<GatekeeperClient['mfa'], 'stepUp' | 'verifyChallenge'> & {
+  verifyChallenge: (
+    input: Parameters<GatekeeperClient['mfa']['verifyChallenge']>[0],
+  ) => Promise<AuthResult>
+  stepUp: (
+    input: Parameters<GatekeeperClient['mfa']['stepUp']>[0],
+  ) => Promise<Awaited<ReturnType<GatekeeperClient['mfa']['stepUp']>>>
+}
 
 export interface GatekeeperOptions {
   /** Realm slug. Defaults to the automatically created `master` realm. */
@@ -34,17 +49,12 @@ const ACCESS_EXP = 'access_token_exp'
 const REFRESH = 'refresh_token'
 const MASTER_REALM = 'master'
 
-/**
- * A browser or server-side client for one Gatekeeper deployment and realm.
- *
- * It persists tokens, attaches a bearer token to RPC calls, and coordinates refreshes. Auth flow
- * methods are under {@link auth}; every unwrapped contract procedure remains under {@link raw}.
- */
+/** A browser or server-side client for one Gatekeeper deployment and realm. */
 export class Gatekeeper extends EventTarget {
-  readonly raw: GatekeeperClient
   readonly auth: {
     signUp: (input: Parameters<GatekeeperClient['auth']['signUp']>[0]) => Promise<AuthResult>
     signIn: (input: { email: string; password: string }) => Promise<AuthResult>
+    requestOtp: GatekeeperClient['auth']['signInOtp']
     verifyOtp: (input: Parameters<GatekeeperClient['auth']['verifyOtp']>[0]) => Promise<AuthResult>
     verifyPasskey: (
       input: Parameters<GatekeeperClient['passkey']['authenticateVerify']>[0],
@@ -52,6 +62,12 @@ export class Gatekeeper extends EventTarget {
     complete: (result: AuthResult) => Promise<AuthResult>
     getSession: GatekeeperClient['auth']['getSession']
     getMe: GatekeeperClient['profile']['get']
+    verifyEmail: (
+      input: Parameters<GatekeeperClient['auth']['verifyEmail']>[0],
+    ) => Promise<AuthResult>
+    requestPasswordReset: GatekeeperClient['auth']['requestPasswordReset']
+    resetPassword: GatekeeperClient['auth']['resetPassword']
+    changePassword: GatekeeperClient['auth']['changePassword']
     signOut: (scope?: 'local' | 'global') => Promise<void>
     switchOrg: (
       orgId: string | null,
@@ -64,6 +80,13 @@ export class Gatekeeper extends EventTarget {
         input: Parameters<GatekeeperClient['auth']['oauthExchange']>[0],
       ) => Promise<AuthResult>
     }
+    sessions: {
+      list: GatekeeperClient['auth']['listSessions']
+      revoke: GatekeeperClient['auth']['revokeSession']
+    }
+    profile: GatekeeperClient['profile']
+    passkeys: PasskeysApi
+    mfa: MfaApi
   }
   readonly sso: {
     discover: GatekeeperClient['sso']['discover']
@@ -75,7 +98,13 @@ export class Gatekeeper extends EventTarget {
       metadata: GatekeeperClient['sso']['metadata']
     }
   }
+  readonly health: GatekeeperClient['health']
+  readonly org: GatekeeperClient['org']
+  readonly authz: GatekeeperClient['authz']
+  readonly hooks: GatekeeperClient['hooks']
+  readonly admin: GatekeeperClient['admin']
 
+  #client: GatekeeperClient
   #storage: TokenStorage
   #skew: number
   #refreshing: Promise<string | null> | null = null
@@ -101,45 +130,86 @@ export class Gatekeeper extends EventTarget {
       },
     })
 
-    this.raw = createORPCClient(link)
+    this.#client = createORPCClient(link)
     this.#refreshClient = createORPCClient(
       new RPCLink({ origin, url: '/rpc', headers: realmHeaders }),
     )
     this.auth = {
-      signUp: async (input) => await this.#persistAuthentication(await this.raw.auth.signUp(input)),
+      signUp: async (input) =>
+        await this.#persistAuthentication(await this.#client.auth.signUp(input)),
       signIn: async (input) =>
-        await this.#persistAuthentication(await this.raw.auth.signInPassword(input)),
+        await this.#persistAuthentication(await this.#client.auth.signInPassword(input)),
+      requestOtp: this.#client.auth.signInOtp,
       verifyOtp: async (input) =>
-        await this.#persistAuthentication(await this.raw.auth.verifyOtp(input)),
+        await this.#persistAuthentication(await this.#client.auth.verifyOtp(input)),
       verifyPasskey: async (input) =>
-        await this.#persistAuthentication(await this.raw.passkey.authenticateVerify(input)),
+        await this.#persistAuthentication(await this.#client.passkey.authenticateVerify(input)),
       complete: async (result) => await this.#persistAuthentication(result),
-      getSession: this.raw.auth.getSession,
-      getMe: this.raw.profile.get,
+      getSession: this.#client.auth.getSession,
+      getMe: this.#client.profile.get,
+      verifyEmail: async (input) =>
+        await this.#persistAuthentication(await this.#client.auth.verifyEmail(input)),
+      requestPasswordReset: this.#client.auth.requestPasswordReset,
+      resetPassword: this.#client.auth.resetPassword,
+      changePassword: this.#client.auth.changePassword,
       signOut: async (scope = 'local') => await this.#signOut(scope),
       switchOrg: async (orgId) => {
-        const result = await this.raw.auth.switchOrg({ orgId })
+        const result = await this.#client.auth.switchOrg({ orgId })
         await this.#persist(result)
         return result
       },
       getAccessToken: async () => await this.#currentAccessToken(),
       isAuthenticated: async () => (await this.#currentAccessToken()) !== null,
       oauth: {
-        start: this.raw.auth.oauthStart,
+        start: this.#client.auth.oauthStart,
         exchange: async (input) =>
-          await this.#persistAuthentication(await this.raw.auth.oauthExchange(input)),
+          await this.#persistAuthentication(await this.#client.auth.oauthExchange(input)),
+      },
+      sessions: {
+        list: this.#client.auth.listSessions,
+        revoke: this.#client.auth.revokeSession,
+      },
+      profile: this.#client.profile,
+      passkeys: {
+        registerOptions: this.#client.passkey.registerOptions,
+        registerVerify: this.#client.passkey.registerVerify,
+        authenticateOptions: this.#client.passkey.authenticateOptions,
+        authenticateVerify: async (input) =>
+          await this.#persistAuthentication(await this.#client.passkey.authenticateVerify(input)),
+        list: this.#client.passkey.list,
+        rename: this.#client.passkey.rename,
+        remove: this.#client.passkey.remove,
+      },
+      mfa: {
+        enrollTotp: this.#client.mfa.enrollTotp,
+        verifyTotpEnrolment: this.#client.mfa.verifyTotpEnrolment,
+        verifyChallenge: async (input) =>
+          await this.#persistAuthentication(await this.#client.mfa.verifyChallenge(input)),
+        stepUp: async (input) => {
+          const result = await this.#client.mfa.stepUp(input)
+          await this.#persist(result)
+          return result
+        },
+        listFactors: this.#client.mfa.listFactors,
+        removeFactor: this.#client.mfa.removeFactor,
+        regenerateRecoveryCodes: this.#client.mfa.regenerateRecoveryCodes,
       },
     }
     this.sso = {
-      discover: this.raw.sso.discover,
-      start: this.raw.sso.start,
+      discover: this.#client.sso.discover,
+      start: this.#client.sso.start,
       providers: {
-        create: this.raw.sso.create,
-        list: this.raw.sso.list,
-        remove: this.raw.sso.remove,
-        metadata: this.raw.sso.metadata,
+        create: this.#client.sso.create,
+        list: this.#client.sso.list,
+        remove: this.#client.sso.remove,
+        metadata: this.#client.sso.metadata,
       },
     }
+    this.health = this.#client.health
+    this.org = this.#client.org
+    this.authz = this.#client.authz
+    this.hooks = this.#client.hooks
+    this.admin = this.#client.admin
   }
 
   async #currentAccessToken(): Promise<string | null> {
@@ -190,7 +260,7 @@ export class Gatekeeper extends EventTarget {
 
   async #signOut(scope: 'local' | 'global') {
     try {
-      await this.raw.auth.signOut({ scope })
+      await this.#client.auth.signOut({ scope })
     } finally {
       await this.#clear()
       this.dispatchEvent(new Event('signout'))
