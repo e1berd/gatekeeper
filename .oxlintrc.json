@@ -1,0 +1,24 @@
+{
+  "plugins": ["typescript", "oxc", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "rules": {
+    "max-lines": [
+      "error",
+      {
+        "max": 350,
+        "skipBlankLines": false,
+        "skipComments": false
+      }
+    ],
+    "no-unused-vars": "error",
+    "eqeqeq": "error",
+    "no-eval": "error",
+    "no-console": "off",
+    "no-await-in-loop": "off"
+  },
+  "ignorePatterns": ["node_modules", "packages/db/drizzle"]
+}

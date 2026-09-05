@@ -1,0 +1,69 @@
+{
+  "workspace": ["./packages/contract", "./packages/db", "./packages/sdk", "./apps/server"],
+  "nodeModulesDir": "auto",
+  "minimumDependencyAge": "PT24H",
+  "tasks": {
+    "dev": "deno run -A --watch apps/server/src/main.ts",
+    "start": "deno run -A apps/server/src/main.ts",
+    "check": "deno check apps/server/src/main.ts apps/server/src/openapi.ts packages/contract/src/mod.ts packages/db/src/migrate.ts packages/sdk/src/mod.ts scripts/gen-router-stubs.ts",
+    "test": "deno test -A",
+    "gen:stubs": "deno run -A scripts/gen-router-stubs.ts",
+    "lint": "deno run -A npm:oxlint@1.81.0",
+    "fmt": "deno run -A npm:oxfmt@0.66.0 . && deno fmt",
+    "openapi": "deno run -A apps/server/src/openapi.ts > openapi.json",
+    "db:generate": "deno run -A npm:drizzle-kit@0.31.10 generate --config=packages/db/drizzle.config.ts",
+    "db:migrate": "deno run -A packages/db/src/migrate.ts",
+    "db:studio": "deno run -A npm:drizzle-kit@0.31.10 studio --config=packages/db/drizzle.config.ts",
+    "up": "docker compose up -d --build",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f gatekeeper",
+    "fmt:check": "deno run -A npm:oxfmt@0.66.0 --check . && deno fmt --check",
+    "verify": "deno task fmt:check && deno task lint && deno task check"
+  },
+  "imports": {
+    "@orpc/contract": "npm:@orpc/contract@2.0.0-beta.32",
+    "@orpc/contract/": "npm:/@orpc/contract@2.0.0-beta.32/",
+    "@orpc/server": "npm:@orpc/server@2.0.0-beta.32",
+    "@orpc/server/": "npm:/@orpc/server@2.0.0-beta.32/",
+    "@orpc/client": "npm:@orpc/client@2.0.0-beta.32",
+    "@orpc/client/": "npm:/@orpc/client@2.0.0-beta.32/",
+    "@orpc/openapi": "npm:@orpc/openapi@2.0.0-beta.32",
+    "@orpc/openapi/": "npm:/@orpc/openapi@2.0.0-beta.32/",
+    "@orpc/zod": "npm:@orpc/zod@2.0.0-beta.32",
+    "zod": "npm:zod@^4.5.4",
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2",
+    "drizzle-orm/": "npm:/drizzle-orm@^0.45.2/",
+    "postgres": "npm:postgres@^3.4.9",
+    "jose": "npm:jose@6.2.11",
+    "@node-rs/argon2": "npm:@node-rs/argon2@^2.2.0",
+    "@simplewebauthn/server": "npm:@simplewebauthn/server@14.0.0",
+    "@simplewebauthn/server/": "npm:/@simplewebauthn/server@14.0.0/",
+    "otpauth": "npm:otpauth@^9.5.2",
+    "@std/path": "jsr:@std/path@^1.1.2",
+    "@std/assert": "jsr:@std/assert@^1.0.14",
+    "@std/encoding": "jsr:@std/encoding@^1.0.10",
+    "@std/testing": "jsr:@std/testing@^1.0.20",
+    "redis": "npm:redis@6.2.1"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "lib": ["deno.window", "deno.ns", "dom"]
+  },
+  "fmt": {
+    "semiColons": false,
+    "singleQuote": true,
+    "lineWidth": 100,
+    "exclude": [
+      "**/*.ts",
+      "**/*.js",
+      "**/*.json",
+      "**/*.jsonc",
+      "node_modules",
+      "packages/db/drizzle"
+    ]
+  },
+  "exclude": ["node_modules", "packages/db/drizzle"]
+}

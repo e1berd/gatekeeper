@@ -1,0 +1,105 @@
+name: gatekeeper
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gatekeeper
+      POSTGRES_PASSWORD: gatekeeper
+      POSTGRES_DB: gatekeeper
+      # Identity data must not be lost to a torn write.
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gatekeeper -d gatekeeper']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # Rate-limit counters and permission caches are rebuildable, so no AOF.
+    command: [
+      'redis-server',
+      '--save',
+      '',
+      '--appendonly',
+      'no',
+      '--maxmemory',
+      '256mb',
+      '--maxmemory-policy',
+      'allkeys-lru',
+    ]
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # One-shot: brings the schema up to date, then exits. The API waits for it.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: [
+      'deno',
+      'run',
+      '--allow-net',
+      '--allow-env',
+      '--allow-read',
+      'packages/db/src/migrate.ts',
+    ]
+    environment:
+      DATABASE_URL: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  gatekeeper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
+      REDIS_URL: redis://redis:6379
+      SMTP_URL: smtp://mailpit:1025
+      GATEKEEPER_PORT: '8080'
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'deno', 'eval', "await fetch('http://localhost:8080/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # Dev only: catches every outgoing email at http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:8025:8025'
+    environment:
+      MP_MAX_MESSAGES: 500
+    restart: unless-stopped
+    profiles: ['dev']
+
+volumes:
+  pgdata:
