@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "astro": "npm:astro@5.18.2",
+    "astro/": "npm:/astro@5.18.2/",
+    "@astrojs/starlight": "npm:@astrojs/starlight@0.34.4"
+  }
+}

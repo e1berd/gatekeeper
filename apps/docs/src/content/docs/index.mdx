@@ -1,0 +1,42 @@
+---
+title: Gatekeeper
+description: Self-hosted authentication and scoped authorization for your applications.
+---
+
+Gatekeeper is self-hosted identity and access management for applications that need authentication,
+sessions, passkeys, MFA, SSO, and authorization with scoped roles.
+
+One contract defines three interfaces:
+
+- `/rpc/*` is the typed interface used by the JavaScript SDK.
+- `/api/*` is the REST interface and its OpenAPI 3.1 description.
+- `/form/*` accepts ordinary browser form posts and manages cookie sessions.
+
+## Current status
+
+The contract, database schema, routing, forms surface, and hook runner are in place. Most business
+handlers are scaffolds and currently return `501 NOT_IMPLEMENTED`; do not deploy this version as an
+identity provider for production traffic. The repository's `TODO.md` tracks the implementation
+order.
+
+## Quick start
+
+```sh
+cp .env.example .env
+openssl rand -base64 32
+deno task up
+curl localhost:8080/healthz
+```
+
+Put the generated random value in `GATEKEEPER_KEK` in `.env` before starting the stack. The Compose
+deployment starts PostgreSQL, Redis, migrations, and Gatekeeper. Add `--profile dev` to include
+Mailpit.
+
+## Is Gatekeeper a fit?
+
+Use it when you want to own identity data and need a typed, self-hosted service shared by several
+applications or environments. It is designed for resource servers that validate access tokens
+locally through JWKS instead of calling an authorization service on every request.
+
+Do not use the current scaffold for a production login flow yet. Federation, operating as an OIDC
+provider, and SCIM are also outside the first MVP.

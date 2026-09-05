@@ -41,7 +41,7 @@ stakes.
 
 Nothing else can be finished before this exists.
 
-- [ ] `lib/password.ts` — Argon2id via `@node-rs/argon2`, OWASP params (m=19456 KiB, t=2, p=1),
+- [x] `lib/password.ts` — Argon2id via `@node-rs/argon2`, OWASP params (m=19456 KiB, t=2, p=1),
       rehash-on-login when params change
 - [ ] `lib/secrets.ts` — envelope encryption: KEK from env unwraps a DEK from
       `auth.encryption_keys`, AES-256-GCM for TOTP seeds, SSO client secrets and SAML keys

@@ -1,5 +1,11 @@
 {
-  "workspace": ["./packages/contract", "./packages/db", "./packages/sdk", "./apps/server"],
+  "workspace": [
+    "./packages/contract",
+    "./packages/db",
+    "./packages/sdk",
+    "./apps/server",
+    "./apps/docs"
+  ],
   "nodeModulesDir": "auto",
   "minimumDependencyAge": "PT24H",
   "tasks": {
@@ -11,6 +17,9 @@
     "lint": "deno run -A npm:oxlint@1.81.0",
     "fmt": "deno run -A npm:oxfmt@0.66.0 . && deno fmt",
     "openapi": "deno run -A apps/server/src/openapi.ts > openapi.json",
+    "docs:dev": "deno run -A npm:astro@5.18.2 dev --root apps/docs",
+    "docs:openapi": "DATABASE_URL=postgres://docs:docs@localhost:5432/docs GATEKEEPER_KEK=docs-build deno run -A apps/server/src/openapi.ts > apps/docs/public/openapi.json",
+    "docs:build": "deno task docs:openapi && deno run -A npm:astro@5.18.2 build --root apps/docs",
     "db:generate": "deno run -A npm:drizzle-kit@0.31.10 generate --config=packages/db/drizzle.config.ts",
     "db:migrate": "deno run -A packages/db/src/migrate.ts",
     "db:studio": "deno run -A npm:drizzle-kit@0.31.10 studio --config=packages/db/drizzle.config.ts",
