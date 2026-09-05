@@ -14,8 +14,11 @@ const { session } = await gk.auth.getSession()
 const { user } = await gk.auth.getMe()
 ```
 
-The realm defaults to `master`, created by the database bootstrap. The client keeps tokens in
-`localStorage` in a browser and in memory elsewhere. Pass `storage` for SSR or another runtime.
+The realm defaults to `master`, created by the database bootstrap. In a supported secure browser
+context, the client keeps tokens through the asynchronous Cookie Store API. It falls back to
+`localStorage` in other browsers and to memory outside browsers. Pass `storage` for SSR or another
+runtime. Cookie Store cookies are readable by JavaScript; use the `/form/*` flow when tokens must be
+HttpOnly.
 
 `signout` is emitted after an explicit sign-out and after a refresh token can no longer create a
 session. It is the single place for application navigation and local user-state cleanup.

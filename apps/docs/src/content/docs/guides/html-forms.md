@@ -41,8 +41,8 @@ issuer, so the identity endpoint cannot be turned into an open redirect.
 
 ```html
 <form method="post" action="https://id.example.com/form/sign-in">
-  <input type="hidden" name="redirect_to" value="https://app.example.com/" />
-  <input type="hidden" name="error_redirect_to" value="https://app.example.com/login" />
+  <data name="redirect_to" value="https://app.example.com/"></data>
+  <data name="error_redirect_to" value="https://app.example.com/login"></data>
   <input name="email" type="email" autocomplete="username" required />
   <input name="password" type="password" autocomplete="current-password" required />
   <button type="submit">Sign in</button>
@@ -56,15 +56,15 @@ On success the browser lands on `redirect_to` with `gk_at` and `gk_rt` set. On f
 
 ```html
 <form method="post" action="https://id.example.com/form/sign-up">
-  <input type="hidden" name="redirect_to" value="https://app.example.com/welcome" />
-  <input type="hidden" name="error_redirect_to" value="https://app.example.com/register" />
+  <data name="redirect_to" value="https://app.example.com/welcome"></data>
+  <data name="error_redirect_to" value="https://app.example.com/register"></data>
   <input name="email" type="email" autocomplete="email" required />
   <input name="password" type="password" autocomplete="new-password" minlength="8" required />
   <button type="submit">Create account</button>
 </form>
 
 <form method="post" action="https://id.example.com/form/sign-out">
-  <input type="hidden" name="redirect_to" value="https://app.example.com/goodbye" />
+  <data name="redirect_to" value="https://app.example.com/goodbye"></data>
   <button type="submit">Sign out</button>
 </form>
 ```
@@ -99,7 +99,7 @@ A cookie-authenticated `POST` needs proof that it came from your own page.
 
 ```html
 <form method="post" action="https://id.example.com/form/sign-in">
-  <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+  <data name="csrf" value="{{ csrf_token }}"></data>
   <!-- email, password, redirect_to … -->
 </form>
 ```

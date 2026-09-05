@@ -92,7 +92,7 @@ minutes ago cannot be pulled into an authentication service.
 
 ```html
 <form method="post" action="https://id.myapp.com/form/sign-up">
-  <input type="hidden" name="redirect_to" value="https://myapp.com/welcome">
+  <data name="redirect_to" value="https://myapp.com/welcome"></data>
   <input name="email" type="email" required>
   <input name="password" type="password" required>
   <button type="submit">Sign up</button>

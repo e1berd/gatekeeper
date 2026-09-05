@@ -2,10 +2,15 @@ import type { RouterContractClient } from '@orpc/contract'
 import { createORPCClient } from '@orpc/client'
 import { RPCLink } from '@orpc/client/fetch'
 import type { AuthResult, contract } from '@gatekeeper/contract'
-import { localStorageAdapter, memoryStorage, type TokenStorage } from './storage.ts'
+import {
+  cookieStoreAdapter,
+  localStorageAdapter,
+  memoryStorage,
+  type TokenStorage,
+} from './storage.ts'
 
 export type { TokenStorage }
-export { localStorageAdapter, memoryStorage }
+export { cookieStoreAdapter, localStorageAdapter, memoryStorage }
 
 /** Every procedure in the Gatekeeper contract. */
 export type GatekeeperClient = RouterContractClient<typeof contract>
@@ -48,6 +53,12 @@ const ACCESS = 'access_token'
 const ACCESS_EXP = 'access_token_exp'
 const REFRESH = 'refresh_token'
 const MASTER_REALM = 'master'
+
+function defaultStorage(): TokenStorage {
+  if (typeof globalThis.cookieStore !== 'undefined') return cookieStoreAdapter()
+  if (typeof globalThis.localStorage !== 'undefined') return localStorageAdapter()
+  return memoryStorage()
+}
 
 /** A browser or server-side client for one Gatekeeper deployment and realm. */
 export class Gatekeeper extends EventTarget {
@@ -115,9 +126,7 @@ export class Gatekeeper extends EventTarget {
 
   constructor(url: string | URL, options: GatekeeperOptions = {}) {
     super()
-    this.#storage =
-      options.storage ??
-      (typeof globalThis.localStorage !== 'undefined' ? localStorageAdapter() : memoryStorage())
+    this.#storage = options.storage ?? defaultStorage()
     this.#skew = options.refreshSkew ?? 30
 
     const origin = url.toString().replace(/\/+$/, '')

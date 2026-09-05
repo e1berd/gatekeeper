@@ -178,7 +178,7 @@ Turnstile сам добавляет `cf-turnstile-response`. `data-action` до�
 <form id="sign-in" method="post" action="https://id.example.com/form/sign-in">
   <input name="email" type="email" required />
   <input name="password" type="password" required />
-  <input name="human_verification" type="hidden" />
+  <data name="human_verification"></data>
   <button type="submit">Войти</button>
 </form>
 
@@ -188,9 +188,12 @@ const form = document.querySelector('#sign-in')
 form.addEventListener('submit', async (event) => {
   event.preventDefault()
   await new Promise((resolve) => grecaptcha.ready(resolve))
-  form.elements.human_verification.value = await grecaptcha.execute('public-site-key', {
-    action: 'sign_in_password',
-  })
+  form.querySelector('data[name="human_verification"]').value = await grecaptcha.execute(
+    'public-site-key',
+    {
+      action: 'sign_in_password',
+    },
+  )
   form.submit()
 })
 </script>
