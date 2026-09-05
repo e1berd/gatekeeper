@@ -1,7 +1,7 @@
 import { OpenAPIGenerator } from '@orpc/openapi'
 import { ZodToJsonSchemaConverter } from '@orpc/zod'
 import { contract } from '@gatekeeper/contract'
-import { config } from './config.ts'
+import { config } from './config-value.ts'
 
 const generator = new OpenAPIGenerator({
   converters: [new ZodToJsonSchemaConverter()],

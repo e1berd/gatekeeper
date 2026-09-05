@@ -39,6 +39,7 @@ export default defineConfig({
             },
             { label: 'Workspace on sign-up', slug: 'guides/workspace-on-sign-up' },
             { label: 'HTML forms', slug: 'guides/html-forms' },
+            { label: 'Human verification', slug: 'guides/human-verification' },
             { label: 'SQL hooks', slug: 'guides/sql-hooks' },
             { label: 'HTTP hooks', slug: 'guides/http-hooks' },
             { label: 'Resource servers', slug: 'guides/resource-servers' },
@@ -54,7 +55,7 @@ export default defineConfig({
           items: [
             { label: 'REST API', slug: 'reference/rest-api' },
             { label: 'SDK', slug: 'reference/sdk' },
-            { label: 'Environment', slug: 'reference/environment' },
+            { label: 'Configuration', slug: 'reference/environment' },
             { label: 'Database schema', slug: 'reference/database-schema' },
           ],
         },

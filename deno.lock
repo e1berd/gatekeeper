@@ -14,6 +14,8 @@
     "jsr:@std/path@^1.1.5": "1.1.6",
     "jsr:@std/path@^1.1.6": "1.1.6",
     "jsr:@std/testing@^1.0.20": "1.0.20",
+    "jsr:@std/yaml@*": "1.2.0",
+    "jsr:@std/yaml@1.2.0": "1.2.0",
     "npm:@astrojs/starlight@0.34.4": "0.34.4_astro@5.18.2__typescript@5.9.3_typescript@5.9.3",
     "npm:@node-rs/argon2@^2.2.0": "2.2.0",
     "npm:@orpc/client@2.0.0-beta.32": "2.0.0-beta.32",
@@ -22,6 +24,7 @@
     "npm:@orpc/server@2.0.0-beta.32": "2.0.0-beta.32",
     "npm:@orpc/zod@2.0.0-beta.32": "2.0.0-beta.32_zod@4.5.4",
     "npm:@simplewebauthn/server@14.0.0": "14.0.0",
+    "npm:altcha-lib@2.4.0": "2.4.0",
     "npm:astro@5.18.2": "5.18.2_typescript@5.9.3",
     "npm:drizzle-kit@0.31.10": "0.31.10",
     "npm:drizzle-orm@~0.45.2": "0.45.2_postgres@3.4.9",
@@ -79,6 +82,9 @@
         "jsr:@std/internal@^1.0.14",
         "jsr:@std/path@^1.1.6"
       ]
+    },
+    "@std/yaml@1.2.0": {
+      "integrity": "20beb41e4983ba3437dbefac62b14061ab058e8a187596f19d28ff9035f6e6cf"
     }
   },
   "npm": {
@@ -1919,6 +1925,10 @@
     },
     "acorn@8.18.0": {
       "integrity": "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==",
+      "bin": true
+    },
+    "altcha-lib@2.4.0": {
+      "integrity": "sha512-QGQPZ3vrL2bZ7rEt9UJs39WSK/LbEanq0jEfwbG6+2wU9wQ2Hzr1hGEs4yPjLew1yNWlkRzY2vsF8N7UM6knWQ==",
       "bin": true
     },
     "ansi-align@3.0.1": {
@@ -4414,6 +4424,7 @@
       "jsr:@std/encoding@^1.0.10",
       "jsr:@std/path@^1.1.2",
       "jsr:@std/testing@^1.0.20",
+      "jsr:@std/yaml@1.2.0",
       "npm:@node-rs/argon2@^2.2.0",
       "npm:@orpc/client@2.0.0-beta.32",
       "npm:@orpc/contract@2.0.0-beta.32",
@@ -4421,6 +4432,7 @@
       "npm:@orpc/server@2.0.0-beta.32",
       "npm:@orpc/zod@2.0.0-beta.32",
       "npm:@simplewebauthn/server@14.0.0",
+      "npm:altcha-lib@2.4.0",
       "npm:drizzle-orm@~0.45.2",
       "npm:jose@6.2.11",
       "npm:otpauth@^9.5.2",

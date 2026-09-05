@@ -34,8 +34,8 @@ Each value is a form field, not a header or a query parameter.
 | `csrf`              | when no `Origin` | Signed token, for clients that send no `Origin` header   |
 
 `redirect_to`, `error_redirect_to`, and `mfa_redirect_to` are each checked against
-`ALLOWED_REDIRECT_ORIGINS`. A target outside the allowlist is silently replaced with the issuer, so
-the identity endpoint cannot be turned into an open redirect.
+`browser.allowedRedirectOrigins`. A target outside the allowlist is silently replaced with the
+issuer, so the identity endpoint cannot be turned into an open redirect.
 
 ## A minimal sign-in form
 
@@ -74,7 +74,7 @@ weaker password is rejected there regardless — see [Validation errors](#valida
 
 ## Cookies
 
-A successful sign-in or sign-up sets these on the domain from `COOKIE_DOMAIN`:
+A successful sign-in or sign-up sets these on the domain from `browser.cookieDomain`:
 
 | Cookie    | Contents            | Lifetime                       |
 | --------- | ------------------- | ------------------------------ |
@@ -90,8 +90,8 @@ supporting control, not the CSRF defence.
 
 A cookie-authenticated `POST` needs proof that it came from your own page.
 
-1. **`Origin` header** — compared to `ALLOWED_FORM_ORIGINS`. A browser sends `Origin` on every form
-   `POST`, so a listed origin is accepted with nothing extra. An `Origin` that is present but
+1. **`Origin` header** — compared to `browser.allowedFormOrigins`. A browser sends `Origin` on every
+   form `POST`, so a listed origin is accepted with nothing extra. An `Origin` that is present but
    unlisted is rejected with `?error=untrusted_origin`.
 2. **Signed token** — for a client that sends no `Origin` at all, submit a `csrf` field carrying the
    token issued alongside the `gk_csrf` cookie. A missing or stale token is rejected with
@@ -105,7 +105,7 @@ A cookie-authenticated `POST` needs proof that it came from your own page.
 ```
 
 The endpoint that hands `csrf_token` to a server-rendered page is M8 work. Until it lands, keep the
-submitting origin in `ALLOWED_FORM_ORIGINS` and rely on the `Origin` check.
+submitting origin in `browser.allowedFormOrigins` and rely on the `Origin` check.
 
 ## Realm selection
 
@@ -152,19 +152,22 @@ if (code) {
 
 Codes the form surface can emit:
 
-| Code                            | Cause                                                  |
-| ------------------------------- | ------------------------------------------------------ |
-| `invalid_credentials`           | Unknown account or wrong password — the two are merged |
-| `email_taken`                   | Sign-up with an address that already exists            |
-| `account_locked`                | Too many failed attempts; retry later                  |
-| `email_not_verified`            | Password is correct but the address is unconfirmed     |
-| `too_many_requests`             | Rate limit hit                                         |
-| `verify_email` / `verify_phone` | Sign-in needs a confirmed address or phone first       |
-| `bad_request`                   | Input failed validation — see below                    |
-| `untrusted_origin`              | `Origin` present but not in `ALLOWED_FORM_ORIGINS`     |
-| `csrf_failed`                   | No `Origin` and no valid `csrf` field                  |
-| `unknown_realm`                 | `x-gatekeeper-realm` names a realm that does not exist |
-| `internal_error`                | Unexpected server fault                                |
+| Code                             | Cause                                                    |
+| -------------------------------- | -------------------------------------------------------- |
+| `invalid_credentials`            | Unknown account or wrong password — the two are merged   |
+| `email_taken`                    | Sign-up with an address that already exists              |
+| `account_locked`                 | Too many failed attempts; retry later                    |
+| `email_not_verified`             | Password is correct but the address is unconfirmed       |
+| `too_many_requests`              | Rate limit hit                                           |
+| `human_verification_required`    | A configured verification proof is missing               |
+| `human_verification_failed`      | The provider rejected the proof                          |
+| `human_verification_unavailable` | The provider could not be reached                        |
+| `verify_email` / `verify_phone`  | Sign-in needs a confirmed address or phone first         |
+| `bad_request`                    | Input failed validation — see below                      |
+| `untrusted_origin`               | `Origin` present but not in `browser.allowedFormOrigins` |
+| `csrf_failed`                    | No `Origin` and no valid `csrf` field                    |
+| `unknown_realm`                  | `x-gatekeeper-realm` names a realm that does not exist   |
+| `internal_error`                 | Unexpected server fault                                  |
 
 The structured `data` some codes carry on `/rpc` and `/api` — `retryAfter` for `too_many_requests`,
 `until` for `account_locked` — is **not** forwarded through the form redirect. A page that needs it

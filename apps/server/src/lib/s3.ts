@@ -1,5 +1,5 @@
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
-import { config } from '../config.ts'
+import { config } from '../config-value.ts'
 
 export interface AvatarStore {
   put(key: string, bytes: Uint8Array<ArrayBuffer>, contentType: string): Promise<string>

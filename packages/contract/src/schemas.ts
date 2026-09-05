@@ -62,6 +62,16 @@ export const Identity = z.object({
 
 export const AuthenticationMethodReference = z.string()
 
+export const HumanVerificationAction = z.enum([
+  'sign_up',
+  'sign_in_password',
+  'sign_in_otp',
+  'password_reset',
+])
+export type HumanVerificationAction = z.infer<typeof HumanVerificationAction>
+
+export const HumanVerificationToken = z.string().min(1).max(100_000)
+
 export const Session = z.object({
   id: Uuid,
   userId: Uuid,

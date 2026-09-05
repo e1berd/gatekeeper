@@ -8,7 +8,8 @@ import { authz } from './authz.ts'
 import { sso } from './sso.ts'
 import { hooks } from './hooks.ts'
 import { admin } from './admin.ts'
-import { config } from '../config.ts'
+import { config } from '../config-value.ts'
+import { humanVerification } from './human-verification.ts'
 
 const health = os.health.handler(async ({ context }) => {
   const checks: Record<string, boolean> = { database: false }
@@ -29,6 +30,7 @@ const health = os.health.handler(async ({ context }) => {
 
 export const router = os.router({
   health,
+  humanVerification,
   auth,
   profile,
   passkey,

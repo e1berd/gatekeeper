@@ -16,8 +16,8 @@ change that cannot break its callers.
 ## Quick start
 
 ```sh
-cp .env.example .env
-openssl rand -base64 32                 # paste into GATEKEEPER_KEK
+cp gatekeeper.example.yaml gatekeeper.yaml
+openssl rand -base64 32                 # paste into security.kek
 
 deno task up                            # postgres + redis + migrations + api
 curl localhost:8080/healthz
@@ -69,13 +69,14 @@ never call Gatekeeper on the hot path. Refresh tokens are opaque, stored only as
 on every use; replaying a spent one revokes the whole session family. Sessions record an AAL, so a
 sensitive operation can demand step-up without ending the session.
 
-**Secrets at rest.** Envelope encryption: a KEK in the environment wraps DEKs in
-`auth.encryption_keys`, which encrypt TOTP seeds, SSO client secrets and SAML keys. Rotating the
+**Secrets at rest.** Envelope encryption: `security.kek` from the runtime configuration wraps DEKs
+in `auth.encryption_keys`, which encrypt TOTP seeds, SSO client secrets and SAML keys. Rotating the
 master key rewraps a handful of rows, not every secret.
 
-**Redis is optional.** The default deployment runs without it. Set `REDIS_URL` only when several
-replicas must share one rate-limit budget — lockout counters are in Postgres, and the permission
-cache is keyed by `permissions_version`, so an entry cannot go stale without becoming unreachable.
+**Redis is optional.** Set `redis.url` to `null` for a single-node deployment. Configure it only
+when several replicas must share one rate-limit budget — lockout counters are in Postgres, and the
+permission cache is keyed by `permissions_version`, so an entry cannot go stale without becoming
+unreachable.
 
 **Per-realm policy.** Password rules, token lifetimes, lockout thresholds and MFA requirements are
 stored in `auth.realms.settings`, not in environment variables, so one deployment can hold a strict
@@ -99,12 +100,12 @@ minutes ago cannot be pulled into an authentication service.
 ```
 
 CSRF is defended primarily by `Origin`, not by a token: a submission carrying an `Origin` outside
-`ALLOWED_FORM_ORIGINS` is rejected outright, and the signed `csrf` field is required only when a
-client sends no `Origin` at all. That means an application rendering its own login page needs no
+`browser.allowedFormOrigins` is rejected outright, and the signed `csrf` field is required only when
+a client sends no `Origin` at all. That means an application rendering its own login page needs no
 token plumbing — no endpoint to call, no meta tag to embed.
 
-`redirect_to` is checked against `ALLOWED_REDIRECT_ORIGINS`. An unvalidated one would be an open
-redirect on an identity provider.
+`redirect_to` is checked against `browser.allowedRedirectOrigins`. An unvalidated one would be an
+open redirect on an identity provider.
 
 ## Hooks
 

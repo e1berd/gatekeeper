@@ -1,10 +1,12 @@
 import type { Database } from '@gatekeeper/db'
 import type { Aal, RealmSettings } from '@gatekeeper/contract'
+import type { HumanVerificationService } from './lib/human-verification.ts'
 
 export interface InitialContext {
   db: Database
   headers: Headers
   ip: string | null
+  humanVerification: HumanVerificationService
 }
 
 export interface AuthenticatedUser {

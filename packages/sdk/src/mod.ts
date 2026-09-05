@@ -38,7 +38,7 @@ export interface GatekeeperOptions {
 
 export interface LegacyGatekeeperOptions extends GatekeeperOptions {
   /** Base URL of the Gatekeeper deployment. */
-  url: string
+  url: string | URL
 
   /** Called when the session ends. Use the `signout` event on new clients. */
   onSignOut?: () => void
@@ -53,7 +53,9 @@ const MASTER_REALM = 'master'
 export class Gatekeeper extends EventTarget {
   readonly auth: {
     signUp: (input: Parameters<GatekeeperClient['auth']['signUp']>[0]) => Promise<AuthResult>
-    signIn: (input: { email: string; password: string }) => Promise<AuthResult>
+    signIn: (
+      input: Parameters<GatekeeperClient['auth']['signInPassword']>[0],
+    ) => Promise<AuthResult>
     requestOtp: GatekeeperClient['auth']['signInOtp']
     verifyOtp: (input: Parameters<GatekeeperClient['auth']['verifyOtp']>[0]) => Promise<AuthResult>
     verifyPasskey: (
@@ -99,6 +101,7 @@ export class Gatekeeper extends EventTarget {
     }
   }
   readonly health: GatekeeperClient['health']
+  readonly humanVerification: GatekeeperClient['humanVerification']
   readonly org: GatekeeperClient['org']
   readonly authz: GatekeeperClient['authz']
   readonly hooks: GatekeeperClient['hooks']
@@ -110,14 +113,14 @@ export class Gatekeeper extends EventTarget {
   #refreshing: Promise<string | null> | null = null
   #refreshClient: GatekeeperClient
 
-  constructor(url: string, options: GatekeeperOptions = {}) {
+  constructor(url: string | URL, options: GatekeeperOptions = {}) {
     super()
     this.#storage =
       options.storage ??
       (typeof globalThis.localStorage !== 'undefined' ? localStorageAdapter() : memoryStorage())
     this.#skew = options.refreshSkew ?? 30
 
-    const origin = url.replace(/\/+$/, '')
+    const origin = url.toString().replace(/\/+$/, '')
     const realmHeaders = () => ({ 'x-gatekeeper-realm': options.realm ?? MASTER_REALM })
     const link = new RPCLink({
       origin,
@@ -206,6 +209,7 @@ export class Gatekeeper extends EventTarget {
       },
     }
     this.health = this.#client.health
+    this.humanVerification = this.#client.humanVerification
     this.org = this.#client.org
     this.authz = this.#client.authz
     this.hooks = this.#client.hooks

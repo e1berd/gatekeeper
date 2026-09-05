@@ -5,11 +5,16 @@
   "sortPackageJson": false,
   "ignorePatterns": [
     "node_modules",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.astro/**",
+    "apps/example/index.html",
     "packages/db/drizzle",
     "openapi.json",
     "deno.lock",
     "**/*.yml",
     "**/*.yaml",
-    "**/*.md"
+    "**/*.md",
+    "**/*.mdx"
   ]
 }

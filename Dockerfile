@@ -20,7 +20,6 @@ USER deno
 
 CMD ["deno", "run", \
   "--allow-net", \
-  "--allow-env", \
   "--allow-read=/app,/deno-dir", \
   "--allow-ffi", \
   "apps/server/src/main.ts"]

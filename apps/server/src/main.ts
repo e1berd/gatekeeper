@@ -7,11 +7,12 @@ import {
 } from '@orpc/server/plugins'
 import { onError } from '@orpc/server'
 import { createDatabase } from '@gatekeeper/db'
-import { config } from './config.ts'
+import { config } from './config-value.ts'
 import { router } from './router/mod.ts'
 import type { InitialContext } from './context.ts'
 import { handleForm } from './forms.ts'
 import { startHookDeliveryWorker } from './lib/hook-delivery.ts'
+import { createHumanVerificationService } from './lib/human-verification.ts'
 
 const RPC_PREFIX = '/rpc'
 const REST_PREFIX = '/api'
@@ -22,18 +23,12 @@ const STATUS_OK = 200
 const STATUS_NOT_FOUND = 404
 const STATUS_NOT_IMPLEMENTED = 501
 
-const PROXY_HEADER_IS_TRUSTED = Deno.env.get('TRUST_PROXY') === 'true'
-
-const CORS_ALLOWED_ORIGINS = (Deno.env.get('CORS_ALLOWED_ORIGINS') ?? config.issuer)
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
-
 const { db } = createDatabase(config.databaseUrl, { max: config.databasePoolMax })
+const humanVerification = createHumanVerificationService(config.humanVerification)
 
 const sharedPlugins = () => [
   new CORSHandlerPlugin({
-    origin: CORS_ALLOWED_ORIGINS,
+    origin: config.browser.corsAllowedOrigins,
     credentials: true,
     allowHeaders: ['content-type', 'authorization', 'x-gatekeeper-realm'],
   }),
@@ -58,7 +53,7 @@ const rest = new OpenAPIHandler(router, {
 
 function resolveClientIp(request: Request, info: Deno.ServeHandlerInfo): string | null {
   const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded && PROXY_HEADER_IS_TRUSTED) {
+  if (forwarded && config.browser.trustProxy) {
     return forwarded.split(',')[0]?.trim() ?? null
   }
 
@@ -89,6 +84,7 @@ async function handler(request: Request, info: Deno.ServeHandlerInfo): Promise<R
     db,
     headers: request.headers,
     ip: resolveClientIp(request, info),
+    humanVerification,
   }
 
   const formResponse = await handleForm(request, context)

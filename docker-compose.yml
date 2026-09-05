@@ -52,12 +52,11 @@ services:
       'deno',
       'run',
       '--allow-net',
-      '--allow-env',
       '--allow-read',
       'packages/db/src/migrate.ts',
     ]
-    environment:
-      DATABASE_URL: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
+    volumes:
+      - ./gatekeeper.yaml:/app/gatekeeper.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,13 +66,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
-      REDIS_URL: redis://redis:6379
-      SMTP_URL: smtp://mailpit:1025
-      GATEKEEPER_PORT: '8080'
+    volumes:
+      - ./gatekeeper.yaml:/app/gatekeeper.yaml:ro
     ports:
       - '8080:8080'
     depends_on:

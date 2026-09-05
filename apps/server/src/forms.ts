@@ -2,7 +2,7 @@ import { call } from '@orpc/server'
 import { deleteCookie, getCookie, setCookie, sign, unsign } from '@orpc/server/helpers'
 import { isDefinedError, ORPCError } from '@orpc/client'
 import { router } from './router/mod.ts'
-import { config } from './config.ts'
+import { config } from './config-value.ts'
 import type { InitialContext } from './context.ts'
 import type { TokenPolicy } from '@gatekeeper/contract'
 import { resolveRealmBySlug } from './lib/realm.ts'
@@ -24,19 +24,12 @@ const STATUS_PAYLOAD_TOO_LARGE = 413
 
 const MAX_FORM_BODY_BYTES = 1024 * 1024
 
-const COOKIE_DOMAIN = Deno.env.get('COOKIE_DOMAIN') || undefined
+const COOKIE_DOMAIN = config.browser.cookieDomain ?? undefined
 const COOKIES_REQUIRE_HTTPS = config.issuer.startsWith('https://')
 const SAME_SITE_THAT_SURVIVES_IDP_REDIRECT = 'lax' as const
 
-const ALLOWED_REDIRECT_ORIGINS = (Deno.env.get('ALLOWED_REDIRECT_ORIGINS') ?? config.issuer)
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
-
-const ALLOWED_FORM_ORIGINS = (Deno.env.get('ALLOWED_FORM_ORIGINS') ?? config.issuer)
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
+const ALLOWED_REDIRECT_ORIGINS = config.browser.allowedRedirectOrigins
+const ALLOWED_FORM_ORIGINS = config.browser.allowedFormOrigins
 
 function cookieOptions(maxAge: number) {
   return {
@@ -187,10 +180,21 @@ async function submitCredentials(
 ) {
   const email = field(form, 'email')
   const password = field(form, 'password')
+  const humanVerification =
+    field(form, 'human_verification') ||
+    field(form, 'cf-turnstile-response') ||
+    field(form, 'h-captcha-response') ||
+    field(form, 'g-recaptcha-response') ||
+    field(form, 'altcha') ||
+    undefined
 
   return action === 'sign-up'
-    ? await call(router.auth.signUp, { email, password, userWritableMetadata: {} }, { context })
-    : await call(router.auth.signInPassword, { email, password }, { context })
+    ? await call(
+        router.auth.signUp,
+        { email, password, userWritableMetadata: {}, humanVerification },
+        { context },
+      )
+    : await call(router.auth.signInPassword, { email, password, humanVerification }, { context })
 }
 
 async function handleCredentialSubmission(

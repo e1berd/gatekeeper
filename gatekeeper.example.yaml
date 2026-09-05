@@ -1,0 +1,53 @@
+server:
+  port: 8080
+  issuer: http://localhost:8080
+  logLevel: info
+  version: 0.1.0
+
+database:
+  url: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
+  poolMax: 10
+
+redis:
+  url: redis://redis:6379
+
+security:
+  kek: CHANGE_ME_BASE64_32_BYTES
+  signingKey: null
+
+browser:
+  cookieDomain: null
+  allowedRedirectOrigins:
+    - http://localhost:3000
+    - http://localhost:8080
+  allowedFormOrigins:
+    - http://localhost:3000
+  corsAllowedOrigins:
+    - http://localhost:3000
+  trustProxy: false
+
+webauthn:
+  rpId: localhost
+  rpName: Gatekeeper
+  origins:
+    - http://localhost:3000
+    - http://localhost:8080
+
+mail:
+  smtpUrl: smtp://mailpit:1025
+  from: no-reply@gatekeeper.local
+
+s3:
+  endpoint: null
+  region: us-east-1
+  accessKeyId: ''
+  secretAccessKey: ''
+  avatarBucket: gatekeeper-avatars
+  publicUrl: null
+  pathStyle: true
+
+humanVerification:
+  provider: disabled
+  actions: []
+  hostnames: []
+  timeoutMs: 5000

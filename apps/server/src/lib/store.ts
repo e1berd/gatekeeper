@@ -2,7 +2,7 @@
  * Shared key-value storage for rate limiting and the permission cache.
  *
  * Two drivers implement it. `memory` is the default and needs no service;
- * `redis` is selected automatically when `REDIS_URL` is set, and is only
+ * `redis` is selected automatically when `redis.url` is configured, and is only
  * required when several replicas must enforce one shared rate limit.
  */
 export interface KeyValueStore {

@@ -1,28 +1,86 @@
 ---
-title: Environment
-description: Server configuration from environment variables.
+title: Configuration
+description: Configure the complete Gatekeeper service with a validated YAML file.
 ---
 
-| Variable                   | Default                     | Purpose                                    |
-| -------------------------- | --------------------------- | ------------------------------------------ |
-| `DATABASE_URL`             | required                    | PostgreSQL connection string.              |
-| `GATEKEEPER_KEK`           | required                    | Key-encryption key for encrypted secrets.  |
-| `GATEKEEPER_PORT`          | `8080`                      | HTTP listener port.                        |
-| `GATEKEEPER_ISSUER`        | `http://localhost:8080`     | Public issuer URL.                         |
-| `GATEKEEPER_SIGNING_KEY`   | unset                       | Bootstrap signing-key material.            |
-| `DATABASE_POOL_MAX`        | `10`                        | PostgreSQL connection-pool limit.          |
-| `REDIS_URL`                | unset                       | Shared Redis for rate limits and caching.  |
-| `SMTP_URL`                 | empty                       | SMTP transport URL.                        |
-| `MAIL_FROM`                | `no-reply@gatekeeper.local` | Default sender address.                    |
-| `WEBAUTHN_RP_ID`           | `localhost`                 | WebAuthn relying-party ID.                 |
-| `WEBAUTHN_RP_NAME`         | `Gatekeeper`                | WebAuthn relying-party name.               |
-| `WEBAUTHN_ORIGINS`         | `http://localhost:8080`     | Comma-separated accepted WebAuthn origins. |
-| `COOKIE_DOMAIN`            | unset                       | Shared cookie domain, when needed.         |
-| `ALLOWED_REDIRECT_ORIGINS` | issuer origin               | Comma-separated form redirect allowlist.   |
-| `ALLOWED_FORM_ORIGINS`     | issuer origin               | Comma-separated CSRF origin allowlist.     |
-| `CORS_ALLOWED_ORIGINS`     | issuer origin               | Comma-separated REST/RPC CORS allowlist.   |
-| `TRUST_PROXY`              | `false`                     | Trust `X-Forwarded-For` only when `true`.  |
-| `LOG_LEVEL`                | `info`                      | Server log level.                          |
-| `GATEKEEPER_VERSION`       | `0.1.0`                     | Version exposed by the server.             |
+Gatekeeper reads `gatekeeper.yaml` from the working directory. Select another file for the server,
+OpenAPI generator, or migration command with either `--config path/to/config.yaml` or
+`--config=path/to/config.yaml`.
 
-Keep `GATEKEEPER_KEK` and signing material in a secret manager, never in the repository or logs.
+Start from the tracked example:
+
+```sh
+cp gatekeeper.example.yaml gatekeeper.yaml
+openssl rand -base64 32
+```
+
+Put the generated value in `security.kek`. The local file is ignored by Git. In production, mount it
+read-only from your deployment secret store and restrict who can read it.
+
+The schema is strict. Unknown keys, invalid URLs and provider-specific mistakes stop Gatekeeper at
+startup instead of silently falling back to another setting.
+
+## Complete example
+
+```yaml
+server:
+  port: 8080
+  issuer: https://id.example.com
+  logLevel: info
+  version: 0.1.0
+
+database:
+  url: postgres://gatekeeper:password@postgres:5432/gatekeeper
+  poolMax: 10
+
+redis:
+  url: redis://redis:6379
+
+security:
+  kek: base64-encoded-key-encryption-key
+  signingKey: null
+
+browser:
+  cookieDomain: .example.com
+  allowedRedirectOrigins: [https://app.example.com]
+  allowedFormOrigins: [https://app.example.com]
+  corsAllowedOrigins: [https://app.example.com]
+  trustProxy: true
+
+webauthn:
+  rpId: example.com
+  rpName: Example
+  origins: [https://app.example.com, https://id.example.com]
+
+mail:
+  smtpUrl: smtp://mail:1025
+  from: no-reply@example.com
+
+s3:
+  endpoint: null
+  region: us-east-1
+  accessKeyId: ''
+  secretAccessKey: ''
+  avatarBucket: gatekeeper-avatars
+  publicUrl: null
+  pathStyle: true
+
+humanVerification:
+  provider: disabled
+  actions: []
+  hostnames: []
+  timeoutMs: 5000
+```
+
+`database.url` and `security.kek` are required. If an origin list is omitted, it defaults to the
+origin of `server.issuer`. Set `redis.url` to `null` to use the in-process store on one server.
+`security.signingKey`, `browser.cookieDomain`, and optional S3 URLs accept `null`.
+
+Human verification supports `turnstile`, `hcaptcha`, `recaptcha`, and `altcha`. Provider-specific
+examples and client integration are in [Human verification](../guides/human-verification/).
+
+## Container deployment
+
+The Compose services mount `./gatekeeper.yaml` at `/app/gatekeeper.yaml` for both migrations and the
+API. Keep the database URL in that file aligned with the Compose network hostname. No Gatekeeper
+environment variables are required.

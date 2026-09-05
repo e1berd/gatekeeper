@@ -1,9 +1,10 @@
 import { implement, ORPCError } from '@orpc/server'
 import { contract } from '@gatekeeper/contract'
-import type { Scope } from '@gatekeeper/contract'
+import type { HumanVerificationAction, Scope } from '@gatekeeper/contract'
 import type { AuthenticatedUser, InitialContext, RealmContext } from './context.ts'
 import { resolveRealmBySlug } from './lib/realm.ts'
 import { hasPermission } from './lib/authz.ts'
+import { HumanVerificationError } from './lib/human-verification.ts'
 
 export const os = implement(contract).$context<
   InitialContext & {
@@ -80,3 +81,24 @@ export function requirePermission(
 export const pub = os.use(resolveRealm)
 
 export const authed = pub.use(requireAuth)
+
+export function requireHumanVerification(action: HumanVerificationAction) {
+  return os.middleware(async ({ context, next }, input: { humanVerification?: string }) => {
+    try {
+      await context.humanVerification.verify(action, input.humanVerification, context.ip)
+    } catch (error) {
+      if (!(error instanceof HumanVerificationError)) throw error
+
+      switch (error.reason) {
+        case 'required':
+          throw new ORPCError('HUMAN_VERIFICATION_REQUIRED')
+        case 'failed':
+          throw new ORPCError('HUMAN_VERIFICATION_FAILED')
+        case 'unavailable':
+          throw new ORPCError('HUMAN_VERIFICATION_UNAVAILABLE')
+      }
+    }
+
+    return next()
+  })
+}

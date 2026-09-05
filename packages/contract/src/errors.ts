@@ -49,6 +49,15 @@ export const AuthErrors = {
   },
 } as const
 
+/** Human-verification failures shared by protected anonymous operations. */
+export const HumanVerificationErrors = {
+  HUMAN_VERIFICATION_REQUIRED: { message: 'Human verification is required' },
+  HUMAN_VERIFICATION_FAILED: { message: 'Human verification failed' },
+  HUMAN_VERIFICATION_UNAVAILABLE: {
+    message: 'Human verification provider is temporarily unavailable',
+  },
+} as const
+
 /** Refresh-token rotation and session-lifecycle failures. */
 export const TokenErrors = {
   INVALID_TOKEN: { message: 'Token is invalid or expired' },

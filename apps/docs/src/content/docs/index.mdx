@@ -15,13 +15,13 @@ One contract defines three interfaces:
 ## Quick start
 
 ```sh
-cp .env.example .env
+cp gatekeeper.example.yaml gatekeeper.yaml
 openssl rand -base64 32
 deno task up
 curl localhost:8080/healthz
 ```
 
-Put the generated random value in `GATEKEEPER_KEK` in `.env` before starting the stack. The Compose
+Put the generated random value in `security.kek` in `gatekeeper.yaml` before starting the stack. The Compose
 deployment starts PostgreSQL, Redis, migrations, and Gatekeeper. Add `--profile dev` to include
 Mailpit.
 

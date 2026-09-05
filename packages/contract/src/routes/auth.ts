@@ -1,38 +1,58 @@
 import { oc } from '@orpc/contract'
 import { openapi } from '@orpc/openapi'
 import * as z from 'zod'
-import { AuthResult, Email, Session, Slug, TokenPair, User } from '../schemas.ts'
-import { AuthErrors, TokenErrors } from '../errors.ts'
+import {
+  AuthResult,
+  Email,
+  HumanVerificationToken,
+  Session,
+  Slug,
+  TokenPair,
+  User,
+} from '../schemas.ts'
+import { AuthErrors, HumanVerificationErrors, TokenErrors } from '../errors.ts'
 
 const base = oc.meta(openapi({ prefix: '/auth', tags: ['auth'] }))
 
 export const signUp = base
   .meta(openapi({ method: 'POST', path: '/sign-up', summary: 'Register with email and password' }))
-  .errors({ ...AuthErrors, EMAIL_TAKEN: { message: 'Email already registered' } })
+  .errors({
+    ...AuthErrors,
+    ...HumanVerificationErrors,
+    EMAIL_TAKEN: { message: 'Email already registered' },
+  })
   .input(
     z.object({
       email: Email,
       password: z.string().min(8).max(256),
       userWritableMetadata: z.record(z.string(), z.unknown()).default({}),
       redirectTo: z.url().optional(),
+      humanVerification: HumanVerificationToken.optional(),
     }),
   )
   .output(AuthResult)
 
 export const signInPassword = base
   .meta(openapi({ method: 'POST', path: '/sign-in/password', summary: 'Sign in with a password' }))
-  .errors(AuthErrors)
-  .input(z.object({ email: Email, password: z.string().max(256) }))
+  .errors({ ...AuthErrors, ...HumanVerificationErrors })
+  .input(
+    z.object({
+      email: Email,
+      password: z.string().max(256),
+      humanVerification: HumanVerificationToken.optional(),
+    }),
+  )
   .output(AuthResult)
 
 export const signInOtp = base
   .meta(openapi({ method: 'POST', path: '/sign-in/otp', summary: 'Request an email or SMS OTP' }))
-  .errors(AuthErrors)
+  .errors({ ...AuthErrors, ...HumanVerificationErrors })
   .input(
     z.object({
       channel: z.enum(['email', 'sms']),
       identifier: z.string().max(320),
       shouldCreateUser: z.boolean().default(true),
+      humanVerification: HumanVerificationToken.optional(),
     }),
   )
   .output(z.object({ sent: z.literal(true), expiresIn: z.number().int() }))
@@ -78,8 +98,14 @@ export const verifyEmail = base
 
 export const requestPasswordReset = base
   .meta(openapi({ method: 'POST', path: '/password/reset-request' }))
-  .errors(AuthErrors)
-  .input(z.object({ email: Email, redirectTo: z.url().optional() }))
+  .errors({ ...AuthErrors, ...HumanVerificationErrors })
+  .input(
+    z.object({
+      email: Email,
+      redirectTo: z.url().optional(),
+      humanVerification: HumanVerificationToken.optional(),
+    }),
+  )
   .output(z.object({ sent: z.literal(true) }))
 
 export const resetPassword = base

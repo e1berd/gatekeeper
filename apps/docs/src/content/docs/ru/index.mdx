@@ -12,13 +12,13 @@ passkeys, MFA, SSO и авторизация со scoped-ролями.
 ## Быстрый старт
 
 ```sh
-cp .env.example .env
+cp gatekeeper.example.yaml gatekeeper.yaml
 openssl rand -base64 32
 deno task up
 curl localhost:8080/healthz
 ```
 
-Запишите сгенерированное значение в `GATEKEEPER_KEK`. Compose поднимает PostgreSQL, Redis,
+Запишите сгенерированное значение в `security.kek` файла `gatekeeper.yaml`. Compose поднимает PostgreSQL, Redis,
 миграции и Gatekeeper; профиль `dev` добавляет Mailpit.
 
 Gatekeeper публикует OpenID discovery и JWKS для проверки токенов, но не является OIDC provider и

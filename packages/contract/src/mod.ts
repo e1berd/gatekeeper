@@ -10,6 +10,7 @@ import { sso } from './routes/sso.ts'
 import { org } from './routes/org.ts'
 import { hooks } from './routes/hooks.ts'
 import { admin } from './routes/admin.ts'
+import { humanVerification } from './routes/human-verification.ts'
 
 export * from './schemas.ts'
 export * from './settings.ts'
@@ -23,6 +24,18 @@ const health = oc.meta(openapi({ method: 'GET', path: '/health', tags: ['meta'] 
   }),
 )
 
-export const contract = { health, auth, profile, passkey, mfa, org, authz, sso, hooks, admin }
+export const contract = {
+  health,
+  humanVerification,
+  auth,
+  profile,
+  passkey,
+  mfa,
+  org,
+  authz,
+  sso,
+  hooks,
+  admin,
+}
 
 export type Contract = typeof contract
