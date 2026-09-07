@@ -59,8 +59,13 @@ const sharedPlugins = () => [
   new RequestLimitHandlerPlugin({ maxBodySize: MAX_REQUEST_BODY_BYTES }),
 ]
 
+function isExpectedClientError(error: unknown): error is ORPCError<string, unknown> {
+  return error instanceof ORPCError && error.defined && (ERROR_STATUS_MAP[error.code] ?? 500) < 500
+}
+
 function logError(error: unknown) {
   // TODO: structured logging plus an audit-log write for auth failures
+  if (isExpectedClientError(error)) return
   console.error('[gatekeeper]', error)
 }
 
