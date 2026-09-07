@@ -25,5 +25,6 @@ USER deno
 CMD ["deno", "run", \
   "--allow-net", \
   "--allow-read=/app,/deno-dir", \
+  "--allow-env=NAPI_RS_WASI_FLAVOR,NAPI_RS_FORCE_WASI,NAPI_RS_NATIVE_LIBRARY_PATH,NAPI_RS_ENFORCE_VERSION_CHECK", \
   "--allow-ffi", \
   "apps/server/src/main.ts"]
