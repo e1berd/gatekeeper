@@ -1,0 +1,1 @@
+ALTER TABLE "auth"."signing_keys" ALTER COLUMN "algorithm" SET DEFAULT 'ES256';

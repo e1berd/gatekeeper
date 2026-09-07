@@ -1,22 +1,23 @@
 import { sql } from 'drizzle-orm'
 import type { Database } from '@gatekeeper/db'
 import type { User } from '@gatekeeper/contract'
+import { toDate, toNullableDate } from './rows.ts'
 
 type UserRow = {
   id: string
   realm_id: string
   email: string | null
-  email_verified_at: Date | null
+  email_verified_at: string | null
   phone: string | null
-  phone_verified_at: Date | null
+  phone_verified_at: string | null
   password_hash: string | null
   status: User['status']
   user_metadata: Record<string, unknown>
   app_metadata: Record<string, unknown>
   avatar_url: string | null
-  last_sign_in_at: Date | null
-  created_at: Date
-  updated_at: Date
+  last_sign_in_at: string | null
+  created_at: string
+  updated_at: string
   mfa_enabled: boolean
 }
 
@@ -34,9 +35,9 @@ function projectUser(row: UserRow): User {
     serverOnlyMetadata: row.app_metadata,
     hasPassword: row.password_hash !== null,
     mfaEnabled: row.mfa_enabled,
-    lastSignInAt: row.last_sign_in_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    lastSignInAt: toNullableDate(row.last_sign_in_at),
+    createdAt: toDate(row.created_at),
+    updatedAt: toDate(row.updated_at),
   }
 }
 

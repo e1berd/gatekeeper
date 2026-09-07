@@ -35,6 +35,12 @@ const WebAuthnConfig = z.strictObject({
   origins: z.array(z.url()).default(['http://localhost:8080']),
 })
 
+const OAuthProviderConfig = z.strictObject({
+  clientId: z.string().min(1),
+  clientSecret: z.string().min(1),
+  scopes: z.array(z.string().min(1)).default([]),
+})
+
 const MailConfig = z.strictObject({
   smtpUrl: z.string().default(''),
   from: z.string().min(1).default('no-reply@gatekeeper.local'),
@@ -82,6 +88,7 @@ const GatekeeperYaml = z.strictObject({
   browser: BrowserConfig.prefault({}),
   webauthn: WebAuthnConfig.prefault({}),
   mail: MailConfig.prefault({}),
+  oauth: z.record(z.string().min(1), OAuthProviderConfig).prefault({}),
   s3: S3Config.prefault({}),
   humanVerification: HumanVerificationConfig.prefault({ provider: 'disabled' }),
 })
@@ -125,6 +132,7 @@ function normalizeConfig(parsed: ParsedConfig) {
     },
     webauthn: parsed.webauthn,
     mail: parsed.mail,
+    oauth: parsed.oauth,
     s3: parsed.s3,
     humanVerification: parsed.humanVerification,
   } as const

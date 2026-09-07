@@ -16,6 +16,7 @@ Only `POST` is accepted; any other method returns `405`. Every response is a red
 | `POST /form/sign-up`  | Create a password identity, then sign in         |
 | `POST /form/sign-in`  | Sign in with an existing password                |
 | `POST /form/sign-out` | Revoke the current session and clear its cookies |
+| `POST /form/profile`  | Edit the signed-in user's own profile and avatar |
 
 Any other path under `/form/` returns `404`. The `verify-email`, `reset-password`,
 `accept-invitation`, and `mfa-challenge` endpoints are planned (M8) and not routed yet.
@@ -71,6 +72,39 @@ On success the browser lands on `redirect_to` with `gk_at` and `gk_rt` set. On f
 
 The browser `minlength` is a convenience. The realm password policy is enforced on the server and a
 weaker password is rejected there regardless — see [Validation errors](#validation-errors).
+
+## Editing your profile
+
+`POST /form/profile` updates the **signed-in** user, so it is authenticated by the `gk_at` cookie
+set at sign-in rather than by `email` / `password`. The same `Origin` / `csrf` rules as every other
+form apply.
+
+| Field           | Meaning                                                                         |
+| --------------- | ------------------------------------------------------------------------------- |
+| `display_name`  | Stored under `userWritableMetadata.displayName`                                 |
+| `locale`        | Stored under `userWritableMetadata.locale`                                      |
+| `avatar`        | Image file (PNG, JPEG or WebP, up to 512 KiB); replaces the current avatar      |
+| `remove_avatar` | Set to `true` to delete the current avatar (ignored when `avatar` is also sent) |
+| `redirect_to`   | Where to send the browser on success                                            |
+
+Send it as `multipart/form-data` when `avatar` is present. The image is stored in the configured S3
+bucket (`s3.*`); when `s3.endpoint` is unset the request fails with
+`?error=avatar_storage_unavailable`. On success the new URL is readable as `user.avatarUrl` from
+`auth.getSession`.
+
+```html
+<form method="post" enctype="multipart/form-data" action="https://id.example.com/form/profile">
+  <input type="hidden" name="redirect_to" value="https://app.example.com/settings" />
+  <input name="display_name" value="Ada Lovelace" />
+  <input name="locale" value="en-GB" />
+  <input name="avatar" type="file" accept="image/png,image/jpeg,image/webp" />
+  <button type="submit">Save</button>
+</form>
+```
+
+Only `display_name` and `locale` are writable through the form. To set arbitrary
+`userWritableMetadata` keys, or to change email, phone or linked providers, call the `profile.*`
+procedures over `/rpc` or `/api`.
 
 ## Cookies
 
@@ -167,6 +201,9 @@ Codes the form surface can emit:
 | `untrusted_origin`               | `Origin` present but not in `browser.allowedFormOrigins` |
 | `csrf_failed`                    | No `Origin` and no valid `csrf` field                    |
 | `unknown_realm`                  | `x-gatekeeper-realm` names a realm that does not exist   |
+| `unsupported_image_type`         | Avatar was not a PNG, JPEG or WebP image                 |
+| `image_too_large`                | Avatar exceeded 512 KiB                                  |
+| `avatar_storage_unavailable`     | `s3.endpoint` is unset on this deployment                |
 | `internal_error`                 | Unexpected server fault                                  |
 
 The structured `data` some codes carry on `/rpc` and `/api` — `retryAfter` for `too_many_requests`,
@@ -223,3 +260,7 @@ See [Errors and localization](/concepts/errors/) for the model behind this.
 The `/form/*` router, CSRF checks, redirect guard, and cookie handling are in place, but the
 `auth.signUp` and `auth.signInPassword` handlers behind them are still stubs. Until the password
 milestone lands, a real submission returns `?error=not_implemented`.
+
+`/form/profile` is routed and its `profile.update` / `profile.uploadAvatar` / `profile.removeAvatar`
+handlers are implemented, but they need the authentication middleware (M3) to resolve the `gk_at`
+cookie into a user. Until that lands a submission returns `?error=not_implemented`.

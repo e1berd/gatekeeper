@@ -30,3 +30,19 @@ export async function effectivePermissions(
 
   return rows.map((r) => r.permission)
 }
+
+/** Role keys the user effectively holds in `scope`, including inherited ones. */
+export async function effectiveRoleKeys(
+  db: Database,
+  userId: string,
+  scope: Scope,
+): Promise<string[]> {
+  const rows = await db.execute<{ key: string }>(sql`
+    select distinct r.key
+    from rbac.effective_role_ids(${userId}::uuid, ${scope.type}, ${scope.id}) e
+    join rbac.roles r on r.id = e.role_id
+    order by r.key
+  `)
+
+  return rows.map((row) => row.key)
+}

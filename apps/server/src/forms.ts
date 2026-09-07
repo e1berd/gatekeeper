@@ -6,6 +6,7 @@ import { config } from './config-value.ts'
 import type { InitialContext } from './context.ts'
 import type { TokenPolicy } from '@gatekeeper/contract'
 import { resolveRealmBySlug } from './lib/realm.ts'
+import { toAllowedRedirect as resolveRedirect } from './lib/redirects.ts'
 
 const FORM_PREFIX = '/form/'
 
@@ -42,19 +43,8 @@ function cookieOptions(maxAge: number) {
   }
 }
 
-function toAllowedRedirect(candidate: string | null, fallback: string): string {
-  if (!candidate) return fallback
-
-  try {
-    const target = new URL(candidate, config.issuer)
-    const isAllowed = ALLOWED_REDIRECT_ORIGINS.some(
-      (allowed) => target.origin === new URL(allowed).origin,
-    )
-    return isAllowed ? target.toString() : fallback
-  } catch {
-    return fallback
-  }
-}
+const toAllowedRedirect = (candidate: string | null, fallback: string): string =>
+  resolveRedirect(candidate, ALLOWED_REDIRECT_ORIGINS, fallback)
 
 function redirect(location: string, headers: Headers): Response {
   headers.set('location', location)

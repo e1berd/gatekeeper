@@ -10,10 +10,26 @@ export const PasswordPolicy = z.object({
 })
 
 export const TokenPolicy = z.object({
+  /**
+   * The `aud` claim minted for this realm. A realm is one product, so its
+   * resource servers share an audience and a token cannot be replayed against
+   * another realm's. `null` falls back to the deployment issuer.
+   */
+  audience: z.string().min(1).nullable().default(null),
   accessTokenTtl: z.number().int().min(60).max(3600).default(900),
   refreshTokenTtl: z.number().int().min(3600).default(2_592_000),
   sessionIdleTimeout: z.number().int().min(300).default(1_209_600),
   sessionAbsoluteTimeout: z.number().int().min(3600).nullable().default(null),
+})
+
+/**
+ * Fixed one-minute windows for the anonymous authentication endpoints. The
+ * per-identifier budget is what stops a single account being sprayed from many
+ * addresses; the per-IP budget stops one address spraying many accounts.
+ */
+export const RateLimitPolicy = z.object({
+  perIpPerMinute: z.number().int().min(1).default(30),
+  perIdentifierPerMinute: z.number().int().min(1).default(10),
 })
 
 export const LockoutPolicy = z.object({
@@ -37,6 +53,7 @@ export const MfaPolicy = z.object({
 export const RealmSettings = z.object({
   password: PasswordPolicy.prefault({}),
   tokens: TokenPolicy.prefault({}),
+  rateLimit: RateLimitPolicy.prefault({}),
   lockout: LockoutPolicy.prefault({}),
   signUp: SignUpPolicy.prefault({}),
   mfa: MfaPolicy.prefault({}),
@@ -44,6 +61,7 @@ export const RealmSettings = z.object({
 
 export type PasswordPolicy = z.infer<typeof PasswordPolicy>
 export type TokenPolicy = z.infer<typeof TokenPolicy>
+export type RateLimitPolicy = z.infer<typeof RateLimitPolicy>
 export type LockoutPolicy = z.infer<typeof LockoutPolicy>
 export type MfaPolicy = z.infer<typeof MfaPolicy>
 export type RealmSettings = z.infer<typeof RealmSettings>

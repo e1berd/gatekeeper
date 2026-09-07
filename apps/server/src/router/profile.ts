@@ -1,6 +1,6 @@
 import { ORPCError } from '@orpc/server'
 import { sql } from 'drizzle-orm'
-import { authed } from '../middleware.ts'
+import { authed, refuseWhileImpersonating } from '../middleware.ts'
 import { todo } from '../lib/todo.ts'
 import { loadUser } from '../lib/user.ts'
 import { avatarStore } from '../lib/s3.ts'
@@ -17,6 +17,8 @@ async function currentUser(context: InitialContext, userId: string) {
   if (!user) throw new ORPCError('NOT_FOUND', { message: 'User not found' })
   return user
 }
+
+const identity = authed.use(refuseWhileImpersonating)
 
 export const profile = {
   get: authed.profile.get.handler(async ({ context }) => {
@@ -76,11 +78,19 @@ export const profile = {
     return { user: await currentUser(context, id) }
   }),
 
-  requestEmailChange: authed.profile.requestEmailChange.handler(todo('profile.requestEmailChange')),
-  confirmEmailChange: authed.profile.confirmEmailChange.handler(todo('profile.confirmEmailChange')),
-  requestPhoneChange: authed.profile.requestPhoneChange.handler(todo('profile.requestPhoneChange')),
-  confirmPhoneChange: authed.profile.confirmPhoneChange.handler(todo('profile.confirmPhoneChange')),
+  requestEmailChange: identity.profile.requestEmailChange.handler(
+    todo('profile.requestEmailChange'),
+  ),
+  confirmEmailChange: identity.profile.confirmEmailChange.handler(
+    todo('profile.confirmEmailChange'),
+  ),
+  requestPhoneChange: identity.profile.requestPhoneChange.handler(
+    todo('profile.requestPhoneChange'),
+  ),
+  confirmPhoneChange: identity.profile.confirmPhoneChange.handler(
+    todo('profile.confirmPhoneChange'),
+  ),
   listIdentities: authed.profile.listIdentities.handler(todo('profile.listIdentities')),
-  linkProvider: authed.profile.linkProvider.handler(todo('profile.linkProvider')),
-  unlinkProvider: authed.profile.unlinkProvider.handler(todo('profile.unlinkProvider')),
+  linkProvider: identity.profile.linkProvider.handler(todo('profile.linkProvider')),
+  unlinkProvider: identity.profile.unlinkProvider.handler(todo('profile.unlinkProvider')),
 }

@@ -1,4 +1,6 @@
-import { authed } from '../middleware.ts'
+import { authed, refuseWhileImpersonating } from '../middleware.ts'
+
+const takeover = authed.use(refuseWhileImpersonating)
 import { todo } from '../lib/todo.ts'
 
 export const admin = {
@@ -9,10 +11,10 @@ export const admin = {
     update: authed.admin.users.update.handler(todo('admin.users.update')),
     remove: authed.admin.users.remove.handler(todo('admin.users.remove')),
     ban: authed.admin.users.ban.handler(todo('admin.users.ban')),
-    setPassword: authed.admin.users.setPassword.handler(todo('admin.users.setPassword')),
+    setPassword: takeover.admin.users.setPassword.handler(todo('admin.users.setPassword')),
     listSessions: authed.admin.users.listSessions.handler(todo('admin.users.listSessions')),
     revokeSessions: authed.admin.users.revokeSessions.handler(todo('admin.users.revokeSessions')),
-    impersonate: authed.admin.users.impersonate.handler(todo('admin.users.impersonate')),
+    impersonate: takeover.admin.users.impersonate.handler(todo('admin.users.impersonate')),
   },
   roles: {
     list: authed.admin.roles.list.handler(todo('admin.roles.list')),

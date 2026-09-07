@@ -1,0 +1,2 @@
+ALTER TABLE "auth"."sessions" ADD COLUMN "impersonator_id" uuid;--> statement-breakpoint
+ALTER TABLE "auth"."sessions" ADD CONSTRAINT "sessions_impersonator_id_users_id_fk" FOREIGN KEY ("impersonator_id") REFERENCES "auth"."users"("id") ON DELETE set null ON UPDATE no action;

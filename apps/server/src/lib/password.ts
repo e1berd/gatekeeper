@@ -131,3 +131,21 @@ export async function checkPassword(
   const valid = await verifyPassword(storedHash, password)
   return { valid, rehash: valid && needsRehash(storedHash, target) }
 }
+
+const decoyHashes = new Map<string, Promise<string>>()
+
+/**
+ * Spends the same Argon2id work a real verification would, for an attempt
+ * against an address that has no account. Without it the response time answers
+ * the question the opaque error deliberately refuses to.
+ */
+export async function burnPasswordVerification(
+  password: string,
+  params: Argon2idParams = OWASP_ARGON2ID_PARAMS,
+): Promise<void> {
+  const key = `${params.memoryKib}:${params.timeCost}:${params.parallelism}`
+  const decoy = decoyHashes.get(key) ?? hashPassword(crypto.randomUUID(), params)
+  decoyHashes.set(key, decoy)
+
+  await verifyPassword(await decoy, password)
+}

@@ -25,6 +25,8 @@ export const sessions = authSchema.table(
       .notNull()
       .references(() => realms.id, { onDelete: 'cascade' }),
     aal: aal('aal').notNull().default('aal1'),
+    activeOrgId: uuid('active_org_id'),
+    impersonatorId: uuid('impersonator_id').references(() => users.id, { onDelete: 'set null' }),
     amr: text('amr')
       .array()
       .notNull()
@@ -73,15 +75,20 @@ export const flowState = authSchema.table(
       .notNull()
       .references(() => realms.id, { onDelete: 'cascade' }),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
-    authCode: text('auth_code').notNull(),
+    stateHash: text('state_hash'),
+    authCodeHash: text('auth_code_hash'),
     codeChallenge: text('code_challenge'),
     codeChallengeMethod: text('code_challenge_method'),
     providerType: text('provider_type').notNull(),
+    providerVerifierEncrypted: text('provider_verifier_encrypted'),
     redirectTo: text('redirect_to'),
     expiresAt: ts('expires_at').notNull(),
     createdAt: now(),
   },
-  (t) => [uniqueIndex('flow_state_code_uq').on(t.authCode)],
+  (t) => [
+    uniqueIndex('flow_state_state_uq').on(t.stateHash),
+    uniqueIndex('flow_state_auth_code_uq').on(t.authCodeHash),
+  ],
 )
 
 export const oneTimeTokens = authSchema.table(

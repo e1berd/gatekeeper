@@ -15,6 +15,48 @@
       "when": 1788625907720,
       "tag": "0001_closed_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788637901432,
+      "tag": "0002_dry_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788781967635,
+      "tag": "0003_curly_jack_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788782358412,
+      "tag": "0004_optimal_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788782973828,
+      "tag": "0005_dear_jane_foster",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788784415494,
+      "tag": "0006_daily_robbie_robertson",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788784422921,
+      "tag": "0007_abnormal_bullseye",
+      "breakpoints": true
     }
   ]
 }

@@ -33,9 +33,22 @@ webauthn:
     - http://localhost:3000
     - http://localhost:8080
 
+# Gatekeeper is an SMTP client, never a mail server: point smtpUrl at the relay
+# your provider gives you and leave delivery, SPF and DKIM to them.
 mail:
   smtpUrl: smtp://mailpit:1025
   from: no-reply@gatekeeper.local
+
+# Social sign-in. The endpoints for each provider are built in; a deployment
+# supplies only credentials, and a provider with no entry here is refused.
+# Redirect URI to register with the provider: <issuer>/oauth/<slug>/callback
+oauth: {}
+#  google:
+#    clientId: ''
+#    clientSecret: ''
+#  github:
+#    clientId: ''
+#    clientSecret: ''
 
 s3:
   endpoint: null

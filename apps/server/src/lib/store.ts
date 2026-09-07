@@ -72,7 +72,19 @@ export function createMemoryStore(): KeyValueStore {
 export async function createRedisStore(url: string): Promise<KeyValueStore> {
   const { createClient } = await import('redis')
   const client = createClient({ url })
-  await client.connect()
+
+  client.on('error', (error: unknown) => {
+    console.error('[gatekeeper] redis', error)
+  })
+
+  try {
+    await client.connect()
+  } catch (cause) {
+    throw new Error(
+      'Cannot reach the Redis in redis.url. Set it to null for a single-node deployment.',
+      { cause },
+    )
+  }
 
   return {
     get: (key) => client.get(key),

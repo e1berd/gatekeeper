@@ -1,14 +1,18 @@
-import { authed, pub } from '../middleware.ts'
+import { authed, pub, rateLimit, refuseWhileImpersonating } from '../middleware.ts'
 import { todo } from '../lib/todo.ts'
 
+const settings = authed.use(refuseWhileImpersonating)
+
 export const mfa = {
-  enrollTotp: authed.mfa.enrollTotp.handler(todo('mfa.enrollTotp')),
-  verifyTotpEnrolment: authed.mfa.verifyTotpEnrolment.handler(todo('mfa.verifyTotpEnrolment')),
-  verifyChallenge: pub.mfa.verifyChallenge.handler(todo('mfa.verifyChallenge')),
-  stepUp: authed.mfa.stepUp.handler(todo('mfa.stepUp')),
+  enrollTotp: settings.mfa.enrollTotp.handler(todo('mfa.enrollTotp')),
+  verifyTotpEnrolment: settings.mfa.verifyTotpEnrolment.handler(todo('mfa.verifyTotpEnrolment')),
+  verifyChallenge: pub.mfa.verifyChallenge
+    .use(rateLimit('mfa_challenge'))
+    .handler(todo('mfa.verifyChallenge')),
+  stepUp: settings.mfa.stepUp.handler(todo('mfa.stepUp')),
   listFactors: authed.mfa.listFactors.handler(todo('mfa.listFactors')),
-  removeFactor: authed.mfa.removeFactor.handler(todo('mfa.removeFactor')),
-  regenerateRecoveryCodes: authed.mfa.regenerateRecoveryCodes.handler(
+  removeFactor: settings.mfa.removeFactor.handler(todo('mfa.removeFactor')),
+  regenerateRecoveryCodes: settings.mfa.regenerateRecoveryCodes.handler(
     todo('mfa.regenerateRecoveryCodes'),
   ),
 }

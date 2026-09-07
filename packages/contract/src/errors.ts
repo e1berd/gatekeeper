@@ -28,6 +28,17 @@ import * as z from 'zod'
  * "Errors and localization" concept page.
  */
 
+/**
+ * Emitted by every rate-limited endpoint. `retryAfter` is the number of seconds
+ * until the current window closes, not a timestamp.
+ */
+export const RateLimitErrors = {
+  TOO_MANY_REQUESTS: {
+    message: 'Rate limit exceeded',
+    data: z.object({ retryAfter: z.number().int() }),
+  },
+} as const
+
 /** Password, OTP and account-state failures across the sign-in and sign-up flows. */
 export const AuthErrors = {
   INVALID_CREDENTIALS: {
@@ -43,9 +54,31 @@ export const AuthErrors = {
   EMAIL_NOT_VERIFIED: {
     message: 'Email address is not verified',
   },
-  TOO_MANY_REQUESTS: {
-    message: 'Rate limit exceeded',
-    data: z.object({ retryAfter: z.number().int() }),
+  ...RateLimitErrors,
+} as const
+
+/** Password-policy rejections. Raised wherever a realm's rules judge a new password. */
+export const PasswordErrors = {
+  WEAK_PASSWORD: {
+    message: 'Password does not meet the realm policy',
+    data: z.object({ minLength: z.number().int() }),
+  },
+} as const
+
+/** Registration refused by realm policy rather than by the submitted values. */
+export const SignUpErrors = {
+  SIGN_UP_DISABLED: { message: 'Registration is closed on this realm' },
+  EMAIL_DOMAIN_NOT_ALLOWED: {
+    message: 'Email domain is not allowed on this realm',
+    data: z.object({ allowed: z.array(z.string()) }),
+  },
+} as const
+
+/** Social sign-in failures that are about the deployment, not the caller. */
+export const OAuthErrors = {
+  PROVIDER_NOT_CONFIGURED: {
+    message: 'Provider is not configured on this deployment',
+    data: z.object({ provider: z.string() }),
   },
 } as const
 

@@ -6,7 +6,7 @@ export const signingKeys = authSchema.table('signing_keys', {
   id: uuid('id').primaryKey().defaultRandom(),
   realmId: uuid('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   kid: text('kid').notNull().unique(),
-  algorithm: text('algorithm').notNull().default('EdDSA'),
+  algorithm: text('algorithm').notNull().default('ES256'),
   publicJwk: jsonb('public_jwk').$type<Record<string, unknown>>().notNull(),
   privateKeyEncrypted: text('private_key_encrypted').notNull(),
   isActive: boolean('is_active').notNull().default(false),

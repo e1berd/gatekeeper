@@ -43,58 +43,96 @@ Nothing else can be finished before this exists.
 
 - [x] `lib/password.ts` — Argon2id via `@node-rs/argon2`, OWASP params (m=19456 KiB, t=2, p=1),
       rehash-on-login when params change
-- [ ] `lib/secrets.ts` — envelope encryption: KEK from env unwraps a DEK from
+- [x] `lib/secrets.ts` — envelope encryption: KEK from env unwraps a DEK from
       `auth.encryption_keys`, AES-256-GCM for TOTP seeds, SSO client secrets and SAML keys
-- [ ] `lib/keys.ts` — signing key generation, load the active key per realm from
+- [x] `lib/keys.ts` — signing key generation, load the active key per realm from
       `auth.signing_keys`, rotation that keeps old public keys published
-- [ ] **Decide the signing algorithm before a single token is issued.** ES256 is the interop-safe
-      default: every JWT library in PHP, Java and .NET verifies P-256, while EdDSA/OKP support is
-      uneven outside JavaScript, and a resource server that cannot parse the JWKS cannot integrate
-      at all. Verify a round trip against `firebase/php-jwt` and one JVM library, then default to
-      ES256 and offer EdDSA as a per-realm opt-in.
-- [ ] `lib/tokens.ts` — JWT issue and verify with `jose`; opaque token generation with SHA-256
+- [x] **Decide the signing algorithm before a single token is issued.** ES256 is the default, EdDSA
+      stays available per realm. `auth.signing_keys.algorithm` defaults to `ES256`.
+- [ ] Verify an ES256 round trip against `firebase/php-jwt` and one JVM library. The decision is
+      made on interop grounds, so the claim is worth proving before the first integration guide.
+- [x] `lib/tokens.ts` — JWT issue and verify with `jose`; opaque token generation with SHA-256
       storage; timing-safe comparison
-- [ ] `GET /.well-known/jwks.json` serves every non-expired public key
-- [ ] `GET /.well-known/openid-configuration` — the discovery document needed to _verify_ tokens:
+- [x] `GET /.well-known/jwks.json` serves every non-expired public key
+- [x] `GET /.well-known/openid-configuration` — the discovery document needed to _verify_ tokens:
       `issuer`, `jwks_uri`, `id_token_signing_alg_values_supported`. Small and static, and it is
       what lets Laravel, Spring, Django and ASP.NET integrate with off-the-shelf libraries instead
       of hand-written code. Not to be confused with being a full OIDC provider, which stays
       post-MVP.
-- [ ] Key bootstrap on first boot when `GATEKEEPER_SIGNING_KEY` is unset
+- [x] Key bootstrap on first boot when `security.signingKey` is unset. Runs for every realm before
+      the listener starts, so the JWKS is never served empty to a resource server that caches it.
 
 ## M2 — Sessions and tokens
 
-- [ ] Session creation with `aal` and `amr`
-- [ ] Refresh rotation: issue child, mark parent used, **revoke the whole family on replay** of a
+- [x] Session creation with `aal` and `amr`
+- [x] Refresh rotation: issue child, mark parent used, **revoke the whole family on replay** of a
       spent token
-- [ ] Idle expiry from `refreshedAt`, absolute expiry from `notAfter`
-- [ ] `auth.refresh`, `auth.signOut` (local and global), `auth.getSession`
-- [ ] `auth.listSessions`, `auth.revokeSession`
-- [ ] `auth.switchOrg` — re-mint an access token bound to another organization
-- [ ] Claim shape frozen and documented: `sub`, `sid`, `realm`, `aal`, `amr`, `org`, `roles`, `pv`,
+- [x] Idle expiry from `refreshedAt`, absolute expiry from `notAfter`
+- [x] `auth.refresh`, `auth.signOut` (local and global), `auth.getSession`
+- [x] `auth.listSessions`, `auth.revokeSession`
+- [x] `auth.switchOrg` — re-mint an access token bound to another organization. Membership is proven
+      by holding a role in that scope, and the binding is stored on the session so a refresh does
+      not silently drop back to the global scope.
+- [x] Claim shape frozen and documented: `sub`, `sid`, `realm`, `aal`, `amr`, `org`, `roles`, `pv`,
       `act`, alongside the standard `iss`, `aud`, `exp` and `nbf`
-- [ ] `aud` is per-application, so a token minted for one resource server cannot be replayed against
-      another
+- [x] `aud` comes from `tokens.audience` in the realm settings and falls back to the issuer. A realm
+      is one product, so its resource servers share an audience and a token minted for one realm
+      cannot be replayed against another.
 
-## M3 — Authentication middleware and rate limiting
+## M3 — Rate limiting and lockout
 
-- [ ] `requireAuth` — the last stub in `middleware.ts`: verify the JWT against the realm's keys,
-      confirm the session is live, reject when `pv` no longer matches `users.permissions_version`
-- [ ] Impersonation: honour `act`, and refuse to widen privileges through it
-- [ ] Redis rate limiting per IP and per identifier (`@orpc/server/helpers` ratelimit)
-- [ ] Exponential lockout driven by `users.failed_attempts` / `last_failed_at`
-- [ ] Enumeration protection: identical response and timing for "no such user" and "wrong password"
-      (`lib/errors.ts` already defines the opaque set)
+- [x] `requireAuth` — verify the JWT against the realm's keys, confirm the session is live, reject
+      when `pv` no longer matches `users.permissions_version`. Landed with M2, because every other
+      procedure in that milestone is authenticated and could not otherwise be exercised.
+- [x] Impersonation: `requireAuth` reads `act` from the session rather than trusting the claim, and
+      rejects a token whose `act` disagrees with it. `refuseWhileImpersonating` blocks the
+      privilege-widening procedures — credential and factor changes, identity linking, admin
+      password reset, and impersonating again. Read-only access is untouched.
+- [x] Rate limiting per IP and per identifier, on fixed one-minute windows keyed by the clock so
+      `retryAfter` is exact and replicas agree. Budgets live in `rateLimit` in the realm settings.
+      Note: `@orpc/server/helpers` has no ratelimit export in 2.0.0-beta.32 — it ships cookies,
+      signing and base64 only — so this is built on `lib/store.ts`, which existed for it.
+- [x] Exponential lockout driven by `users.failed_attempts` / `last_failed_at`: `lib/lockout.ts`
+      doubles the window past the threshold, caps it, measures from the last failure and lets an
+      administrative ban outrank the counter. Unit-tested; the calls that feed it land with
+      `signInPassword` in M4, which is the only thing that can fail an attempt.
+- [x] Enumeration protection: `opaque` collapses the codes, `burnPasswordVerification` spends the
+      same Argon2id work for an address with no account, and `notFasterThan` puts a floor under the
+      whole attempt so a fast rejection cannot be timed apart from a slow one. Unit-tested; wired
+      into the sign-in handler in M4.
 
 ## M4 — Password and email flows
 
-- [ ] `auth.signUp`, `auth.signInPassword`
-- [ ] `auth.verifyEmail`, `auth.requestPasswordReset`, `auth.resetPassword`, `auth.changePassword`
-- [ ] `auth.signInOtp`, `auth.verifyOtp`
-- [ ] `auth.oauthStart` / `auth.oauthExchange` with PKCE, Google and GitHub
-- [ ] Account linking: a second provider for an existing email creates an `auth.identities` row
-      rather than a second user
-- [ ] One-time tokens hashed, single-use, expiring
+- [x] `auth.signUp`, `auth.signInPassword`
+- [x] Wire M3 into `signInPassword`: `lockoutVerdict` before the password check,
+      `recordFailedAttempt` / `clearFailedAttempts` after it, `burnPasswordVerification` when no
+      user matches, and the whole attempt inside `notFasterThan`. Measured: an unknown address, a
+      wrong password and a correct one all answer in 252-256 ms.
+- [x] Honour `signUp.requireEmailVerification` from the realm settings: when it is off, the address
+      is marked verified at sign-up and tokens are returned instead of `verification_required`.
+- [ ] Honour `signUp.requireEmailVerification` from the realm settings: when it is off, mark the
+      address verified at sign-up and return tokens instead of `verification_required`. This is the
+      knob a development realm turns off, and the reason it is a realm setting rather than a
+      deployment-wide flag — one deployment holds a strict production realm beside a relaxed one.
+- [x] `auth.verifyEmail`, `auth.requestPasswordReset`, `auth.resetPassword`, `auth.changePassword`.
+      A reset ends every session; `changePassword` with `revokeOtherSessions` spares the caller's.
+- [ ] `auth.signInOtp`, `auth.verifyOtp` — blocked on delivery, see M8
+- [x] `auth.oauthStart` / `auth.oauthExchange` with PKCE, Google and GitHub. Two independent PKCE
+      exchanges: the caller's against Gatekeeper, and Gatekeeper's against the provider, whose
+      verifier is sealed with the realm data key until the callback needs it. `state` and the
+      authorization code are both single-use and stored only as digests.
+- [ ] Verify the provider leg against live credentials. Everything up to the token endpoint is
+      exercised — Google answers our exchange with a structured 401 for the fake client — but the
+      profile fetch, linking and code issuance after a _successful_ exchange are not. Closing this
+      wants a stub provider in the M9 harness, which in turn wants per-provider endpoint overrides
+      in `oauth.<slug>` — the same knob a self-hosted GitLab or Keycloak would need anyway.
+- [x] Account linking: a second provider for an existing email creates an `auth.identities` row
+      rather than a second user — but only when the provider reports that address as verified. An
+      unverified address that already has an account is refused with `EMAIL_TAKEN`, because
+      honouring it would let anyone who can set a profile email take over the account.
+- [x] One-time tokens hashed, single-use, expiring. Issuing consumes any unused token of the same
+      type for that user, so a resend cannot leave two live links behind, and the redemption is the
+      `update ... returning` itself, so two concurrent claims cannot both win.
 
 ## M5 — Passkeys and MFA
 
@@ -131,7 +169,11 @@ Nothing else can be finished before this exists.
 
 ## M8 — Email and the form surface
 
-- [ ] SMTP sender with retry, plus a dev path through Mailpit
+- [ ] SMTP **client** talking to an external relay — Gatekeeper is never a mail server. `smtpUrl`
+      points at whatever the operator's provider gives them, and delivery, SPF and DKIM stay that
+      provider's problem. `lib/mail.ts` already has the `Mailer` seam and the message bodies; every
+      send currently goes to the log, and a configured `mail.smtpUrl` warns once that nothing leaves
+      the process.
 - [ ] Templates: verification, password reset, OTP, invitation, new-device alert
 - [ ] Per-realm branding for these templates
 - [ ] Locale resolution for the server-rendered surfaces — email templates and `/form/*` pages —
@@ -162,7 +204,9 @@ deployment, and none of them is indexed for a time-ranged delete.
 
 ## M9 — Operations
 
-- [ ] Unit tests for crypto, token rotation, permission resolution
+- [ ] Unit tests for crypto, token rotation, permission resolution. `tokens_test.ts` covers issue
+      and verify, audience and issuer binding, expiry, unpublished keys and opaque tokens; the
+      database-backed paths in `secrets.ts` and `keys.ts` still need the integration harness below.
 - [ ] Integration tests against a real Postgres container, covering the flows already exercised by
       hand: sign-up creating a workspace atomically, quota denial, refresh replay revoking a family
 - [ ] `deno task test` green, wired into `deno task verify`

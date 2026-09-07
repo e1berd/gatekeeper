@@ -84,6 +84,8 @@ export const Session = z.object({
   notAfter: z.date().nullable(),
 })
 
+export type Session = z.infer<typeof Session>
+
 export const TokenPair = z.object({
   accessToken: z.string(),
   tokenType: z.literal('Bearer'),
@@ -92,6 +94,8 @@ export const TokenPair = z.object({
   session: Session,
   user: User,
 })
+
+export type TokenPair = z.infer<typeof TokenPair>
 
 export const AuthResult = z.discriminatedUnion('status', [
   z.object({ status: z.literal('authenticated'), tokens: TokenPair }),

@@ -2,7 +2,7 @@ import { oc } from '@orpc/contract'
 import { openapi } from '@orpc/openapi'
 import * as z from 'zod'
 import { AuthResult, FactorType, Uuid } from '../schemas.ts'
-import { MfaErrors, TokenErrors } from '../errors.ts'
+import { MfaErrors, RateLimitErrors, TokenErrors } from '../errors.ts'
 
 const base = oc.meta(openapi({ prefix: '/mfa', tags: ['mfa'] }))
 
@@ -36,7 +36,7 @@ export const verifyTotpEnrolment = base
 
 export const verifyChallenge = base
   .meta(openapi({ method: 'POST', path: '/challenge/verify' }))
-  .errors({ ...TokenErrors, ...MfaErrors })
+  .errors({ ...TokenErrors, ...MfaErrors, ...RateLimitErrors })
   .input(
     z.object({
       challengeToken: z.string(),

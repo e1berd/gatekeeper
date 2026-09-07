@@ -10,7 +10,15 @@ import {
   TokenPair,
   User,
 } from '../schemas.ts'
-import { AuthErrors, HumanVerificationErrors, TokenErrors } from '../errors.ts'
+import {
+  AuthErrors,
+  HumanVerificationErrors,
+  OAuthErrors,
+  PasswordErrors,
+  RateLimitErrors,
+  SignUpErrors,
+  TokenErrors,
+} from '../errors.ts'
 
 const base = oc.meta(openapi({ prefix: '/auth', tags: ['auth'] }))
 
@@ -19,6 +27,8 @@ export const signUp = base
   .errors({
     ...AuthErrors,
     ...HumanVerificationErrors,
+    ...PasswordErrors,
+    ...SignUpErrors,
     EMAIL_TAKEN: { message: 'Email already registered' },
   })
   .input(
@@ -71,7 +81,7 @@ export const verifyOtp = base
 
 export const refresh = base
   .meta(openapi({ method: 'POST', path: '/refresh', summary: 'Rotate a refresh token' }))
-  .errors(TokenErrors)
+  .errors({ ...TokenErrors, ...RateLimitErrors })
   .input(z.object({ refreshToken: z.string() }))
   .output(TokenPair)
 
@@ -92,7 +102,7 @@ export const getSession = base
 
 export const verifyEmail = base
   .meta(openapi({ method: 'POST', path: '/verify-email' }))
-  .errors(TokenErrors)
+  .errors({ ...TokenErrors, ...RateLimitErrors })
   .input(z.object({ token: z.string() }))
   .output(AuthResult)
 
@@ -110,13 +120,13 @@ export const requestPasswordReset = base
 
 export const resetPassword = base
   .meta(openapi({ method: 'POST', path: '/password/reset' }))
-  .errors({ ...AuthErrors, ...TokenErrors })
+  .errors({ ...AuthErrors, ...TokenErrors, ...PasswordErrors })
   .input(z.object({ token: z.string(), password: z.string().min(8).max(256) }))
   .output(z.object({ ok: z.literal(true) }))
 
 export const changePassword = base
   .meta(openapi({ method: 'POST', path: '/password/change' }))
-  .errors({ ...AuthErrors, ...TokenErrors })
+  .errors({ ...AuthErrors, ...TokenErrors, ...PasswordErrors })
   .input(
     z.object({
       currentPassword: z.string().max(256).nullable(),
@@ -139,7 +149,7 @@ export const revokeSession = base
 
 export const oauthStart = base
   .meta(openapi({ method: 'POST', path: '/oauth/{provider}/start' }))
-  .errors(AuthErrors)
+  .errors({ ...AuthErrors, ...OAuthErrors })
   .input(
     z.object({
       provider: Slug,
@@ -151,7 +161,11 @@ export const oauthStart = base
 
 export const oauthExchange = base
   .meta(openapi({ method: 'POST', path: '/oauth/exchange' }))
-  .errors({ ...AuthErrors, ...TokenErrors })
+  .errors({
+    ...AuthErrors,
+    ...TokenErrors,
+    EMAIL_TAKEN: { message: 'Email already registered' },
+  })
   .input(z.object({ code: z.string(), codeVerifier: z.string().min(43).max(128).optional() }))
   .output(AuthResult)
 
