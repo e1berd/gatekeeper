@@ -89,12 +89,16 @@ var Gatekeeper = class extends EventTarget {
 		this.#storage = options.storage ?? defaultStorage();
 		this.#skew = options.refreshSkew ?? 30;
 		const origin = url.toString().replace(/\/+$/, "");
-		const realmHeaders = () => ({ "x-gatekeeper-realm": options.realm ?? MASTER_REALM });
+		const staticHeaders = () => {
+			const headers = { "x-gatekeeper-realm": options.realm ?? MASTER_REALM };
+			if (options.language) headers["accept-language"] = options.language;
+			return headers;
+		};
 		const link = new RPCLink({
 			origin,
 			url: "/rpc",
 			headers: async () => {
-				const headers = realmHeaders();
+				const headers = staticHeaders();
 				const token = await this.#currentAccessToken();
 				if (token) headers.authorization = `Bearer ${token}`;
 				return headers;
@@ -104,7 +108,7 @@ var Gatekeeper = class extends EventTarget {
 		this.#refreshClient = createORPCClient(new RPCLink({
 			origin,
 			url: "/rpc",
-			headers: realmHeaders
+			headers: staticHeaders
 		}));
 		this.auth = {
 			signUp: async (input) => await this.#persistAuthentication(await this.#client.auth.signUp(input)),

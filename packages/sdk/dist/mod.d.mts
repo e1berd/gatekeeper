@@ -4688,6 +4688,11 @@ type MfaApi = Omit<GatekeeperClient['mfa'], 'stepUp' | 'verifyChallenge'> & {
 export interface GatekeeperOptions {
   /** Realm slug. Defaults to the automatically created `master` realm. */
   realm?: string;
+  /**
+   * BCP 47 language tag sent as `Accept-Language`. The server localizes typed
+   * error messages to it; `code` and `data` are unaffected.
+   */
+  language?: string;
   /** Storage for the access and refresh tokens. */
   storage?: TokenStorage;
   /** Seconds before expiry at which the access token is refreshed. @default 30 */
