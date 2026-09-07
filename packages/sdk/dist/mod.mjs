@@ -111,6 +111,7 @@ var Gatekeeper = class extends EventTarget {
 			signIn: async (input) => await this.#persistAuthentication(await this.#client.auth.signInPassword(input)),
 			requestOtp: this.#client.auth.signInOtp,
 			verifyOtp: async (input) => await this.#persistAuthentication(await this.#client.auth.verifyOtp(input)),
+			verifySignedPayload: async (input) => await this.#persistAuthentication(await this.#client.auth.verifySignedPayload(input)),
 			verifyPasskey: async (input) => await this.#persistAuthentication(await this.#client.passkey.authenticateVerify(input)),
 			complete: async (result) => await this.#persistAuthentication(result),
 			getSession: this.#client.auth.getSession,

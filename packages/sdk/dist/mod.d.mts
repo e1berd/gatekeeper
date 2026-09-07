@@ -4707,6 +4707,7 @@ export declare class Gatekeeper extends EventTarget {
     signIn: (input: Parameters<GatekeeperClient['auth']['signInPassword']>[0]) => Promise<AuthResult>;
     requestOtp: GatekeeperClient['auth']['signInOtp'];
     verifyOtp: (input: Parameters<GatekeeperClient['auth']['verifyOtp']>[0]) => Promise<AuthResult>;
+    verifySignedPayload: (input: Parameters<GatekeeperClient['auth']['verifySignedPayload']>[0]) => Promise<AuthResult>;
     verifyPasskey: (input: Parameters<GatekeeperClient['passkey']['authenticateVerify']>[0]) => Promise<AuthResult>;
     complete: (result: AuthResult) => Promise<AuthResult>;
     getSession: GatekeeperClient['auth']['getSession'];

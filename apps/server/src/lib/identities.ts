@@ -28,11 +28,13 @@ async function linkIdentity(
 }
 
 async function createUser(db: Database, realmId: string, profile: OAuthProfile): Promise<string> {
+  const metadata = profile.name === null ? {} : { name: profile.name }
+
   const rows = await db.execute<{ id: string }>(sql`
-    insert into auth.users (realm_id, email, email_verified_at, avatar_url, status)
+    insert into auth.users (realm_id, email, email_verified_at, avatar_url, status, user_metadata)
     values (
       ${realmId}::uuid, ${profile.email}, ${profile.emailVerified ? sql`now()` : null},
-      ${profile.avatarUrl}, 'active'
+      ${profile.avatarUrl}, 'active', ${JSON.stringify(metadata)}::jsonb
     )
     returning id
   `)
@@ -50,6 +52,10 @@ async function createUser(db: Database, realmId: string, profile: OAuthProfile):
  * rather than a second user — but only when the provider says it verified that
  * address. An unverified address is a claim, not a proof, and honouring it would
  * let anyone who can set a profile email take over the matching account.
+ *
+ * A new account keeps the name the provider reported in `user_metadata`, because
+ * an account created from Google or Telegram should know what to call itself and
+ * nothing else on the user carries a display name.
  */
 export async function resolveUser(
   db: Database,

@@ -69,6 +69,9 @@ export class Gatekeeper extends EventTarget {
     ) => Promise<AuthResult>
     requestOtp: GatekeeperClient['auth']['signInOtp']
     verifyOtp: (input: Parameters<GatekeeperClient['auth']['verifyOtp']>[0]) => Promise<AuthResult>
+    verifySignedPayload: (
+      input: Parameters<GatekeeperClient['auth']['verifySignedPayload']>[0],
+    ) => Promise<AuthResult>
     verifyPasskey: (
       input: Parameters<GatekeeperClient['passkey']['authenticateVerify']>[0],
     ) => Promise<AuthResult>
@@ -154,6 +157,8 @@ export class Gatekeeper extends EventTarget {
       requestOtp: this.#client.auth.signInOtp,
       verifyOtp: async (input) =>
         await this.#persistAuthentication(await this.#client.auth.verifyOtp(input)),
+      verifySignedPayload: async (input) =>
+        await this.#persistAuthentication(await this.#client.auth.verifySignedPayload(input)),
       verifyPasskey: async (input) =>
         await this.#persistAuthentication(await this.#client.passkey.authenticateVerify(input)),
       complete: async (result) => await this.#persistAuthentication(result),
