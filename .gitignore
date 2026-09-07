@@ -6,3 +6,5 @@ gatekeeper.yaml
 openapi.json
 /data/
 .DS_Store
+package-lock.json
+packages/*/dist/

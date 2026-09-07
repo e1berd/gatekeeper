@@ -1,0 +1,33 @@
+{
+  "name": "@gatekeeper/sdk",
+  "version": "0.1.0",
+  "description": "Typed client for a Gatekeeper deployment.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.mts",
+      "default": "./dist/mod.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "prepare": "tsdown"
+  },
+  "peerDependencies": {
+    "@orpc/client": "2.0.0-beta.32",
+    "@orpc/contract": "2.0.0-beta.32",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@orpc/client": "2.0.0-beta.32",
+    "@orpc/contract": "2.0.0-beta.32",
+    "@orpc/openapi": "2.0.0-beta.32",
+    "tsdown": "^0.23.0",
+    "typescript": "^5.9.3",
+    "zod": "^4.5.4"
+  }
+}

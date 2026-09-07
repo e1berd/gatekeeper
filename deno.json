@@ -18,6 +18,7 @@
     "lint": "deno run -A npm:oxlint@1.81.0",
     "fmt": "deno run -A npm:oxfmt@0.66.0 . && deno fmt",
     "openapi": "deno run -A apps/server/src/openapi.ts > openapi.json",
+    "sdk:build": "cd packages/sdk && npm install --no-audit --no-fund && npx tsdown",
     "docs:dev": "deno run -A npm:astro@5.18.2 dev --root apps/docs",
     "example:dev": "deno run -A npm:vite@6.4.3 --host 0.0.0.0 apps/example",
     "example:build": "deno run -A npm:vite@6.4.3 build apps/example",
