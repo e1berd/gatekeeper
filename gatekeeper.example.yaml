@@ -50,6 +50,14 @@ oauth: {}
 #    clientId: ''
 #    clientSecret: ''
 
+# Providers that prove identity with a payload they signed themselves, rather
+# than with a redirect. `secret` is the key that signature is checked against —
+# for Telegram, the bot token.
+signedPayload: {}
+#  telegram:
+#    secret: ''
+#    maxAgeSeconds: 86400
+
 s3:
   endpoint: null
   region: us-east-1

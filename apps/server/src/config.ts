@@ -41,6 +41,12 @@ const OAuthProviderConfig = z.strictObject({
   scopes: z.array(z.string().min(1)).default([]),
 })
 
+/** A provider that proves identity with a signed blob instead of a redirect dance. */
+const SignedPayloadProviderConfig = z.strictObject({
+  secret: z.string().min(1),
+  maxAgeSeconds: z.number().int().min(60).default(86_400),
+})
+
 const MailConfig = z.strictObject({
   smtpUrl: z.string().default(''),
   from: z.string().min(1).default('no-reply@gatekeeper.local'),
@@ -89,6 +95,7 @@ const GatekeeperYaml = z.strictObject({
   webauthn: WebAuthnConfig.prefault({}),
   mail: MailConfig.prefault({}),
   oauth: z.record(z.string().min(1), OAuthProviderConfig).prefault({}),
+  signedPayload: z.record(z.string().min(1), SignedPayloadProviderConfig).prefault({}),
   s3: S3Config.prefault({}),
   humanVerification: HumanVerificationConfig.prefault({ provider: 'disabled' }),
 })
@@ -133,6 +140,7 @@ function normalizeConfig(parsed: ParsedConfig) {
     webauthn: parsed.webauthn,
     mail: parsed.mail,
     oauth: parsed.oauth,
+    signedPayload: parsed.signedPayload,
     s3: parsed.s3,
     humanVerification: parsed.humanVerification,
   } as const

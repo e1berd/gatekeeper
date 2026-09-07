@@ -20,5 +20,5 @@
     "no-console": "off",
     "no-await-in-loop": "off"
   },
-  "ignorePatterns": ["node_modules", "packages/db/drizzle"]
+  "ignorePatterns": ["node_modules", "packages/db/drizzle", "packages/sdk/dist"]
 }

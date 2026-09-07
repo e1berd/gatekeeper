@@ -15,6 +15,7 @@ import { FlowError, type FlowEnv } from '../lib/flows.ts'
 import { changePassword, signInPassword, signUp } from '../lib/password-auth.ts'
 import { requestPasswordReset, resetPassword, verifyEmail } from '../lib/email-flows.ts'
 import { beginOAuth, exchangeAuthorizationCode, type OAuthEnv } from '../lib/oauth.ts'
+import { verifySignedPayload } from '../lib/signed-payload.ts'
 import type { AuthenticatedUser, InitialContext, RealmContext } from '../context.ts'
 import { listUserSessions, requireLiveSession, SessionError } from '../lib/session-records.ts'
 import {
@@ -203,6 +204,12 @@ export const auth = {
     .use(rateLimit('oauth_exchange'))
     .handler(({ context, input, errors }) =>
       runFlow(errors, () => exchangeAuthorizationCode(oauthEnv(context), input)),
+    ),
+
+  verifySignedPayload: pub.auth.verifySignedPayload
+    .use(rateLimit('signed_payload'))
+    .handler(({ context, input, errors }) =>
+      runFlow(errors, () => verifySignedPayload(flowEnv(context), config.signedPayload, input)),
     ),
 
   switchOrg: authed.auth.switchOrg.handler(async ({ context, input, errors }) => {

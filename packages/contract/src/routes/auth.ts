@@ -169,6 +169,28 @@ export const oauthExchange = base
   .input(z.object({ code: z.string(), codeVerifier: z.string().min(43).max(128).optional() }))
   .output(AuthResult)
 
+/**
+ * Exchanges a payload the provider signed itself — a Telegram Mini App's
+ * `initData`, and anything else shaped like it — for a session. There is no
+ * redirect leg, so the whole exchange is this one call.
+ */
+export const verifySignedPayload = base
+  .meta(
+    openapi({
+      method: 'POST',
+      path: '/signed-payload/{provider}',
+      summary: 'Exchange a provider-signed payload for a session',
+    }),
+  )
+  .errors({
+    ...AuthErrors,
+    ...TokenErrors,
+    ...OAuthErrors,
+    EMAIL_TAKEN: { message: 'Email already registered' },
+  })
+  .input(z.object({ provider: Slug, payload: z.string().min(1).max(8192) }))
+  .output(AuthResult)
+
 export const switchOrg = base
   .meta(
     openapi({
@@ -204,5 +226,6 @@ export const auth = {
   revokeSession,
   oauthStart,
   oauthExchange,
+  verifySignedPayload,
   switchOrg,
 }
