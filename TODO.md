@@ -215,7 +215,11 @@ deployment, and none of them is indexed for a time-ranged delete.
 - [ ] Structured JSON logging with request ids; never log tokens or secrets
 - [ ] `/healthz` reports database and Redis separately
 - [ ] Backup and restore procedure, and a documented key-rotation runbook
-- [ ] Publish `@gatekeeper/sdk` to npm and JSR
+- [ ] Publish `@gatekeeper/sdk` to npm and JSR. It is packaged and buildable already (tsdown,
+      contract inlined); until it is published, consumers install it from git and
+      `packages/sdk/dist` is committed for them. Publishing lets that go away.
+- [ ] Fail `verify` when `packages/sdk/dist` is stale against the contract, so a committed build
+      cannot silently drift
 
 ---
 

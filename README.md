@@ -40,7 +40,11 @@ packages/contract   The API definition. No logic, no server code — the client
 packages/db         Drizzle schema for the auth / rbac / audit Postgres schemas,
                     plus the SQL functions that resolve permissions.
 packages/sdk        @gatekeeper/sdk — typed client with token storage, an
-                    Authorization header, and deduplicated refresh.
+                    Authorization header, and deduplicated refresh. Built by
+                    tsdown with the contract inlined, and `dist/` is committed:
+                    consumers install it straight from git, and pnpm would
+                    otherwise demand a build-script grant keyed to a commit hash.
+                    Run `deno task sdk:build` after changing the contract.
 apps/server         Implementation of the contract, and the HTTP surface.
 ```
 
