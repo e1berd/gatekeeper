@@ -4688,11 +4688,6 @@ type MfaApi = Omit<GatekeeperClient['mfa'], 'stepUp' | 'verifyChallenge'> & {
 export interface GatekeeperOptions {
   /** Realm slug. Defaults to the automatically created `master` realm. */
   realm?: string;
-  /**
-   * BCP 47 language tag sent as `Accept-Language`. The server localizes typed
-   * error messages to it; `code` and `data` are unaffected.
-   */
-  language?: string;
   /** Storage for the access and refresh tokens. */
   storage?: TokenStorage;
   /** Seconds before expiry at which the access token is refreshed. @default 30 */
@@ -4754,6 +4749,12 @@ export declare class Gatekeeper extends EventTarget {
   readonly hooks: GatekeeperClient['hooks'];
   readonly admin: GatekeeperClient['admin'];
   constructor(url: string | URL, options?: GatekeeperOptions);
+  /**
+   * Sets the `Accept-Language` sent on every subsequent request. The server
+   * localizes typed error messages to it; `code` and `data` are unaffected.
+   * Pass `null` to stop sending the header.
+   */
+  setLanguage(language: string | null): void;
 }
 /** Creates a {@link Gatekeeper} using the pre-0.2 options-object API. */
 export declare function createGatekeeper(options: LegacyGatekeeperOptions): Gatekeeper;

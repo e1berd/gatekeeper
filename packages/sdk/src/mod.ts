@@ -34,12 +34,6 @@ export interface GatekeeperOptions {
   /** Realm slug. Defaults to the automatically created `master` realm. */
   realm?: string
 
-  /**
-   * BCP 47 language tag sent as `Accept-Language`. The server localizes typed
-   * error messages to it; `code` and `data` are unaffected.
-   */
-  language?: string
-
   /** Storage for the access and refresh tokens. */
   storage?: TokenStorage
 
@@ -130,6 +124,7 @@ export class Gatekeeper extends EventTarget {
   #client: GatekeeperClient
   #storage: TokenStorage
   #skew: number
+  #language: string | null = null
   #refreshing: Promise<string | null> | null = null
   #refreshClient: GatekeeperClient
 
@@ -143,7 +138,7 @@ export class Gatekeeper extends EventTarget {
       const headers: Record<string, string> = {
         'x-gatekeeper-realm': options.realm ?? MASTER_REALM,
       }
-      if (options.language) headers['accept-language'] = options.language
+      if (this.#language) headers['accept-language'] = this.#language
       return headers
     }
     const link = new RPCLink({
@@ -240,6 +235,15 @@ export class Gatekeeper extends EventTarget {
     this.authz = this.#client.authz
     this.hooks = this.#client.hooks
     this.admin = this.#client.admin
+  }
+
+  /**
+   * Sets the `Accept-Language` sent on every subsequent request. The server
+   * localizes typed error messages to it; `code` and `data` are unaffected.
+   * Pass `null` to stop sending the header.
+   */
+  setLanguage(language: string | null): void {
+    this.#language = language
   }
 
   async #currentAccessToken(): Promise<string | null> {

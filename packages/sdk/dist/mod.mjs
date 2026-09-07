@@ -82,6 +82,7 @@ var Gatekeeper = class extends EventTarget {
 	#client;
 	#storage;
 	#skew;
+	#language = null;
 	#refreshing = null;
 	#refreshClient;
 	constructor(url, options = {}) {
@@ -91,7 +92,7 @@ var Gatekeeper = class extends EventTarget {
 		const origin = url.toString().replace(/\/+$/, "");
 		const staticHeaders = () => {
 			const headers = { "x-gatekeeper-realm": options.realm ?? MASTER_REALM };
-			if (options.language) headers["accept-language"] = options.language;
+			if (this.#language) headers["accept-language"] = this.#language;
 			return headers;
 		};
 		const link = new RPCLink({
@@ -180,6 +181,14 @@ var Gatekeeper = class extends EventTarget {
 		this.authz = this.#client.authz;
 		this.hooks = this.#client.hooks;
 		this.admin = this.#client.admin;
+	}
+	/**
+	* Sets the `Accept-Language` sent on every subsequent request. The server
+	* localizes typed error messages to it; `code` and `data` are unaffected.
+	* Pass `null` to stop sending the header.
+	*/
+	setLanguage(language) {
+		this.#language = language;
 	}
 	async #currentAccessToken() {
 		const token = await this.#storage.get(ACCESS);
