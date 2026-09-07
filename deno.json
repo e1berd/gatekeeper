@@ -78,8 +78,9 @@
       "**/*.json",
       "**/*.jsonc",
       "node_modules",
-      "packages/db/drizzle"
+      "packages/db/drizzle",
+      "packages/sdk/dist"
     ]
   },
-  "exclude": ["node_modules", "packages/db/drizzle"]
+  "exclude": ["node_modules", "packages/db/drizzle", "packages/sdk/dist"]
 }
