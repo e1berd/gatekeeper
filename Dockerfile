@@ -19,6 +19,7 @@ RUN deno check apps/server/src/main.ts
 
 ENV DENO_DIR=/deno-dir
 EXPOSE 8080
+RUN chown deno:deno /app/node_modules/@gatekeeper
 USER deno
 
 CMD ["deno", "run", \
