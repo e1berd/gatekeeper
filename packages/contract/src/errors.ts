@@ -3,13 +3,14 @@ import * as z from 'zod'
 /**
  * Typed error catalogues shared by the contract, the server and the SDK.
  *
- * The `code` — the object key, such as `INVALID_CREDENTIALS` — is the stable,
- * localizable identifier. Treat it as an i18n message key: a client renders its
- * own copy keyed by `code` and by the procedure it came from, and ignores the
- * `message` string, which is an English developer-facing fallback and is never
- * translated. `data`, where a code defines it, is the structured payload to
- * interpolate into that copy (`retryAfter`, `requiredAal`, `until`) — format it
- * with the viewer's locale, do not read it as prose.
+ * The `code` — the object key, such as `INVALID_CREDENTIALS` — is the stable
+ * identifier and the i18n key. The `message` here is the English source string;
+ * the server localizes it per request from `Accept-Language` (`en`, `ru`), so it
+ * is a safe fallback but carries no interpolated `data`. A client with rich UI
+ * still renders its own copy keyed by `code` and the procedure it came from.
+ * `data`, where a code defines it, is the structured payload for that copy
+ * (`retryAfter`, `requiredAal`, `until`) — format it with the viewer's locale,
+ * do not read it as prose.
  *
  * How a code reaches the caller depends on the surface:
  *
@@ -23,9 +24,9 @@ import * as z from 'zod'
  * their `message` is likewise not for display. The contract deliberately omits
  * custom Zod messages so there is no English string to leak into a form field.
  *
- * The rendered copy for every code, and the locale-resolution rule for the
- * server-rendered surfaces (emails and `/form/*` pages), live in the
- * "Errors and localization" concept page.
+ * The per-code catalogues (`apps/server/src/i18n/`), the HTTP status per code
+ * (`apps/server/src/error-status.ts`), and the locale-resolution rule live in
+ * the "Errors and localization" concept page.
  */
 
 /**

@@ -34,6 +34,12 @@ export interface GatekeeperOptions {
   /** Realm slug. Defaults to the automatically created `master` realm. */
   realm?: string
 
+  /**
+   * BCP 47 language tag sent as `Accept-Language`. The server localizes typed
+   * error messages to it; `code` and `data` are unaffected.
+   */
+  language?: string
+
   /** Storage for the access and refresh tokens. */
   storage?: TokenStorage
 
@@ -133,12 +139,18 @@ export class Gatekeeper extends EventTarget {
     this.#skew = options.refreshSkew ?? 30
 
     const origin = url.toString().replace(/\/+$/, '')
-    const realmHeaders = () => ({ 'x-gatekeeper-realm': options.realm ?? MASTER_REALM })
+    const staticHeaders = () => {
+      const headers: Record<string, string> = {
+        'x-gatekeeper-realm': options.realm ?? MASTER_REALM,
+      }
+      if (options.language) headers['accept-language'] = options.language
+      return headers
+    }
     const link = new RPCLink({
       origin,
       url: '/rpc',
       headers: async () => {
-        const headers: Record<string, string> = realmHeaders()
+        const headers = staticHeaders()
         const token = await this.#currentAccessToken()
         if (token) headers.authorization = `Bearer ${token}`
         return headers
@@ -147,7 +159,7 @@ export class Gatekeeper extends EventTarget {
 
     this.#client = createORPCClient(link)
     this.#refreshClient = createORPCClient(
-      new RPCLink({ origin, url: '/rpc', headers: realmHeaders }),
+      new RPCLink({ origin, url: '/rpc', headers: staticHeaders }),
     )
     this.auth = {
       signUp: async (input) =>

@@ -1,0 +1,42 @@
+UNAUTHORIZED: Authentication required
+FORBIDDEN: Insufficient permissions
+NOT_FOUND: Resource not found
+CONFLICT: Resource already exists
+BAD_REQUEST: The request is malformed
+
+TOO_MANY_REQUESTS: Rate limit exceeded
+
+INVALID_CREDENTIALS: Invalid credentials
+USER_NOT_FOUND: User not found
+ACCOUNT_LOCKED: Account is locked
+EMAIL_NOT_VERIFIED: Email address is not verified
+
+WEAK_PASSWORD: Password does not meet the realm policy
+
+SIGN_UP_DISABLED: Registration is closed on this realm
+EMAIL_DOMAIN_NOT_ALLOWED: Email domain is not allowed on this realm
+EMAIL_TAKEN: Email already registered
+PHONE_TAKEN: Phone number already registered
+
+PROVIDER_NOT_CONFIGURED: Provider is not configured on this deployment
+
+HUMAN_VERIFICATION_REQUIRED: Human verification is required
+HUMAN_VERIFICATION_FAILED: Human verification failed
+HUMAN_VERIFICATION_UNAVAILABLE: Human verification provider is temporarily unavailable
+
+INVALID_TOKEN: Token is invalid or expired
+TOKEN_REUSE_DETECTED: Refresh token was replayed; every session in the family is revoked
+SESSION_REVOKED: Session has been revoked
+
+MFA_REQUIRED: Multi-factor authentication required
+INVALID_MFA_CODE: Invalid verification code
+FACTOR_NOT_FOUND: Factor not found
+FACTOR_ALREADY_VERIFIED: Factor is already verified
+STEP_UP_REQUIRED: Action requires a higher authenticator assurance level than this session has
+
+IMMUTABLE: Resource cannot be modified
+UNSUPPORTED_IMAGE_TYPE: Avatar must be a PNG, JPEG or WebP image
+IMAGE_TOO_LARGE: Avatar exceeds the maximum allowed size
+AVATAR_STORAGE_UNAVAILABLE: Avatar storage is not configured on this deployment
+IDENTITY_NOT_FOUND: Linked identity not found
+CANNOT_UNLINK_SOLE_CREDENTIAL: Cannot unlink the only remaining way to sign in

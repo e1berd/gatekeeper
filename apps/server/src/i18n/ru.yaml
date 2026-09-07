@@ -1,0 +1,42 @@
+UNAUTHORIZED: Требуется вход
+FORBIDDEN: Недостаточно прав
+NOT_FOUND: Ресурс не найден
+CONFLICT: Ресурс уже существует
+BAD_REQUEST: Некорректный запрос
+
+TOO_MANY_REQUESTS: Слишком много запросов, попробуйте позже
+
+INVALID_CREDENTIALS: Неверная почта или пароль
+USER_NOT_FOUND: Пользователь не найден
+ACCOUNT_LOCKED: Аккаунт временно заблокирован
+EMAIL_NOT_VERIFIED: Почта не подтверждена
+
+WEAK_PASSWORD: Пароль не соответствует требованиям
+
+SIGN_UP_DISABLED: Регистрация в этом realm закрыта
+EMAIL_DOMAIN_NOT_ALLOWED: Домен почты не разрешён в этом realm
+EMAIL_TAKEN: Эта почта уже зарегистрирована
+PHONE_TAKEN: Этот телефон уже зарегистрирован
+
+PROVIDER_NOT_CONFIGURED: Провайдер не настроен в этой инсталляции
+
+HUMAN_VERIFICATION_REQUIRED: Требуется проверка, что вы человек
+HUMAN_VERIFICATION_FAILED: Проверка, что вы человек, не пройдена
+HUMAN_VERIFICATION_UNAVAILABLE: Сервис проверки человека временно недоступен
+
+INVALID_TOKEN: Токен недействителен или истёк
+TOKEN_REUSE_DETECTED: Refresh-токен использован повторно, все сессии семьи отозваны
+SESSION_REVOKED: Сессия отозвана
+
+MFA_REQUIRED: Требуется второй фактор
+INVALID_MFA_CODE: Неверный код подтверждения
+FACTOR_NOT_FOUND: Фактор не найден
+FACTOR_ALREADY_VERIFIED: Фактор уже подтверждён
+STEP_UP_REQUIRED: Действие требует более высокого уровня подтверждения, чем у текущей сессии
+
+IMMUTABLE: Ресурс нельзя изменить
+UNSUPPORTED_IMAGE_TYPE: Аватар должен быть PNG, JPEG или WebP
+IMAGE_TOO_LARGE: Аватар превышает максимальный размер
+AVATAR_STORAGE_UNAVAILABLE: Хранилище аватаров не настроено в этой инсталляции
+IDENTITY_NOT_FOUND: Связанная учётная запись не найдена
+CANNOT_UNLINK_SOLE_CREDENTIAL: Нельзя отвязать единственный способ входа

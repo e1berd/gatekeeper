@@ -5,9 +5,11 @@ import {
   PrototypePollutionProtectionHandlerPlugin,
   RequestLimitHandlerPlugin,
 } from '@orpc/server/plugins'
-import { onError } from '@orpc/server'
+import { onError, ORPCError } from '@orpc/server'
 import { createDatabase } from '@gatekeeper/db'
 import { config } from './config-value.ts'
+import { ERROR_STATUS_MAP } from './error-status.ts'
+import { localizeErrorMessage, resolveLanguage } from './i18n.ts'
 import { router } from './router/mod.ts'
 import type { InitialContext } from './context.ts'
 import { handleForm } from './forms.ts'
@@ -62,14 +64,43 @@ function logError(error: unknown) {
   console.error('[gatekeeper]', error)
 }
 
+/** Rewrites the English fallback `message` of a typed error into the caller's language. */
+function localizeError(error: unknown, acceptLanguage: string | null): void {
+  if (!(error instanceof ORPCError)) return
+  const message = localizeErrorMessage(error.code, resolveLanguage(acceptLanguage))
+  if (message) error.message = message
+}
+
 const rpc = new RPCHandler(router, {
   plugins: sharedPlugins(),
   interceptors: [onError(logError)],
+  errorStatusMap: ERROR_STATUS_MAP,
+  clientInterceptors: [
+    async ({ next, context }) => {
+      try {
+        return await next()
+      } catch (error) {
+        localizeError(error, context.headers.get('accept-language'))
+        throw error
+      }
+    },
+  ],
 })
 
 const rest = new OpenAPIHandler(router, {
   plugins: sharedPlugins(),
   interceptors: [onError(logError)],
+  errorStatusMap: ERROR_STATUS_MAP,
+  clientInterceptors: [
+    async ({ next, context }) => {
+      try {
+        return await next()
+      } catch (error) {
+        localizeError(error, context.headers.get('accept-language'))
+        throw error
+      }
+    },
+  ],
 })
 
 function resolveClientIp(request: Request, info: Deno.ServeHandlerInfo): string | null {
