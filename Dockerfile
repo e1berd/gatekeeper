@@ -6,7 +6,10 @@ COPY deno.json deno.lock ./
 COPY packages/contract/deno.json packages/contract/
 COPY packages/db/deno.json packages/db/
 COPY packages/sdk/deno.json packages/sdk/
+COPY packages/sdk/package.json packages/sdk/
 COPY apps/server/deno.json apps/server/
+COPY apps/docs/deno.json apps/docs/
+COPY apps/example/deno.json apps/example/
 
 RUN deno install --frozen
 
