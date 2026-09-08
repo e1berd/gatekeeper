@@ -57,6 +57,13 @@
       "when": 1788784422921,
       "tag": "0007_abnormal_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788824614701,
+      "tag": "0008_brief_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

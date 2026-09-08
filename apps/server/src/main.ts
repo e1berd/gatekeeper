@@ -5,8 +5,9 @@ import {
   PrototypePollutionProtectionHandlerPlugin,
   RequestLimitHandlerPlugin,
 } from '@orpc/server/plugins'
-import { onError, ORPCError } from '@orpc/server'
+import { call, onError, ORPCError } from '@orpc/server'
 import { createDatabase } from '@gatekeeper/db'
+import { runMigrations } from '@gatekeeper/db/migrate'
 import { config } from './config-value.ts'
 import { ERROR_STATUS_MAP } from './error-status.ts'
 import { localizeErrorMessage, resolveLanguage } from './i18n.ts'
@@ -23,6 +24,8 @@ import { createMailer } from './lib/mail.ts'
 import { FlowError } from './lib/flows.ts'
 import type { OAuthDeps } from './lib/oauth.ts'
 import { completeOAuthCallback } from './lib/oauth-callback.ts'
+import { resolveRealmBySlug } from './lib/realm.ts'
+import { persistSession } from './lib/session-cookies.ts'
 
 const RPC_PREFIX = '/rpc'
 const REST_PREFIX = '/api'
@@ -134,7 +137,33 @@ function discoveryDocument() {
 const OAUTH_CALLBACK = /^\/oauth\/([a-z0-9][a-z0-9._-]*)\/callback$/
 const STATUS_BAD_REQUEST = 400
 
-async function handleOAuthCallback(url: URL): Promise<Response | null> {
+async function redirectWithSessionCookies(
+  request: Request,
+  context: InitialContext,
+  outcome: { code: string; location: string },
+): Promise<Response> {
+  const realmSlug = request.headers.get('x-gatekeeper-realm') ?? 'master'
+  const realm = await resolveRealmBySlug(context.db, realmSlug)
+  if (!realm) return new Response('unknown_realm', { status: STATUS_BAD_REQUEST })
+
+  const result = await call(router.auth.oauthExchange, { code: outcome.code }, { context })
+  const target = new URL(outcome.location)
+
+  if (result.status !== 'authenticated') {
+    target.searchParams.set('error', result.status)
+    return new Response(null, { status: SEE_OTHER, headers: { location: target.toString() } })
+  }
+
+  const headers = new Headers({ location: target.toString() })
+  persistSession(headers, result.tokens, realm.settings.tokens)
+  return new Response(null, { status: SEE_OTHER, headers })
+}
+
+async function handleOAuthCallback(
+  request: Request,
+  context: InitialContext,
+): Promise<Response | null> {
+  const url = new URL(request.url)
   const slug = OAUTH_CALLBACK.exec(url.pathname)?.[1]
   if (!slug) return null
 
@@ -146,8 +175,11 @@ async function handleOAuthCallback(url: URL): Promise<Response | null> {
   }
 
   try {
-    const location = await completeOAuthCallback(oauth, slug, code, state)
-    return new Response(null, { status: SEE_OTHER, headers: { location } })
+    const outcome = await completeOAuthCallback(oauth, slug, code, state)
+
+    return outcome.sessionSink === 'cookie'
+      ? await redirectWithSessionCookies(request, context, outcome)
+      : new Response(null, { status: SEE_OTHER, headers: { location: outcome.location } })
   } catch (error) {
     logError(error)
 
@@ -196,13 +228,14 @@ async function handler(request: Request, info: Deno.ServeHandlerInfo): Promise<R
 
   const url = new URL(request.url)
   return (
-    (await handleOAuthCallback(url)) ??
+    (await handleOAuthCallback(request, context)) ??
     (await handleStandardsEndpoint(url.pathname)) ??
     new Response('Not found', { status: STATUS_NOT_FOUND })
   )
 }
 
 if (import.meta.main) {
+  await runMigrations(config.databaseUrl)
   await signingKeys.bootstrap()
   startHookDeliveryWorker(db, config.kek)
   Deno.serve({ port: config.port, hostname: '0.0.0.0' }, handler)

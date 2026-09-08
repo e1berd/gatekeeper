@@ -19,16 +19,20 @@ change that cannot break its callers.
 cp gatekeeper.example.yaml gatekeeper.yaml
 openssl rand -base64 32                 # paste into security.kek
 
-deno task up                            # postgres + redis + migrations + api
+deno task up                            # postgres + redis + api
 curl localhost:8080/healthz
 
 deno task openapi > openapi.json        # the REST contract, for other languages
 ```
 
+The server runs `runMigrations` on boot, so there is no separate migration step: `deno task up` is
+enough, and `deno task db:migrate` exists only to migrate without starting the API.
+`gatekeeper.yaml` values may reference the environment as `${VAR}` or `${VAR:-default}` — that is
+how a host application points `database.url` at the Postgres it shares with Gatekeeper.
+
 Without Docker:
 
 ```sh
-deno task db:migrate
 deno task dev
 ```
 

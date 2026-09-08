@@ -82,6 +82,7 @@ export const flowState = authSchema.table(
     providerType: text('provider_type').notNull(),
     providerVerifierEncrypted: text('provider_verifier_encrypted'),
     redirectTo: text('redirect_to'),
+    sessionSink: text('session_sink'),
     expiresAt: ts('expires_at').notNull(),
     createdAt: now(),
   },

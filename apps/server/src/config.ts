@@ -1,6 +1,7 @@
 import { parse as parseYaml } from '@std/yaml'
 import * as z from 'zod'
 import { HumanVerificationAction } from '@gatekeeper/contract'
+import { expandEnv } from '@gatekeeper/db/env'
 
 const DEFAULT_CONFIG_PATH = 'gatekeeper.yaml'
 
@@ -148,9 +149,13 @@ function normalizeConfig(parsed: ParsedConfig) {
 
 export type Config = ReturnType<typeof normalizeConfig>
 
-/** Parses and validates the complete Gatekeeper YAML configuration. */
+/**
+ * Parses and validates the complete Gatekeeper YAML configuration. `${VAR}` and
+ * `${VAR:-default}` references are expanded from the environment first, so a
+ * deployment can keep secrets out of the file.
+ */
 export function parseConfig(source: string): Config {
-  return normalizeConfig(GatekeeperYaml.parse(parseYaml(source)))
+  return normalizeConfig(GatekeeperYaml.parse(parseYaml(expandEnv(source))))
 }
 
 /** Loads the YAML file selected by `--config`, or `gatekeeper.yaml` by default. */

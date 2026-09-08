@@ -1,17 +1,24 @@
+import { sql } from 'drizzle-orm'
 import { call } from '@orpc/server'
-import { deleteCookie, getCookie, setCookie, sign, unsign } from '@orpc/server/helpers'
+import { getCookie, setCookie, sign, unsign } from '@orpc/server/helpers'
 import { isDefinedError, ORPCError } from '@orpc/client'
 import { router } from './router/mod.ts'
 import { config } from './config-value.ts'
 import type { InitialContext } from './context.ts'
-import type { TokenPolicy } from '@gatekeeper/contract'
+import type { AuthResult, TokenPolicy } from '@gatekeeper/contract'
 import { resolveRealmBySlug } from './lib/realm.ts'
 import { toAllowedRedirect as resolveRedirect } from './lib/redirects.ts'
+import { sha256Hex } from './lib/tokens.ts'
+import {
+  ACCESS_COOKIE,
+  clearSession,
+  cookieOptions,
+  persistSession,
+  readRefreshCookie,
+} from './lib/session-cookies.ts'
 
 const FORM_PREFIX = '/form/'
 
-const ACCESS_COOKIE = 'gk_at'
-const REFRESH_COOKIE = 'gk_rt'
 const CSRF_COOKIE = 'gk_csrf'
 const MFA_CHALLENGE_COOKIE = 'gk_mfa'
 
@@ -19,29 +26,15 @@ const CSRF_TOKEN_TTL_SECONDS = 3600
 const MFA_CHALLENGE_TTL_SECONDS = 300
 
 const STATUS_SEE_OTHER_SO_REFRESH_CANNOT_RESUBMIT = 303
+const STATUS_NO_CONTENT = 204
 const STATUS_METHOD_NOT_ALLOWED = 405
 const STATUS_NOT_FOUND = 404
 const STATUS_PAYLOAD_TOO_LARGE = 413
 
 const MAX_FORM_BODY_BYTES = 1024 * 1024
 
-const COOKIE_DOMAIN = config.browser.cookieDomain ?? undefined
-const COOKIES_REQUIRE_HTTPS = config.issuer.startsWith('https://')
-const SAME_SITE_THAT_SURVIVES_IDP_REDIRECT = 'lax' as const
-
 const ALLOWED_REDIRECT_ORIGINS = config.browser.allowedRedirectOrigins
 const ALLOWED_FORM_ORIGINS = config.browser.allowedFormOrigins
-
-function cookieOptions(maxAge: number) {
-  return {
-    httpOnly: true,
-    secure: COOKIES_REQUIRE_HTTPS,
-    sameSite: SAME_SITE_THAT_SURVIVES_IDP_REDIRECT,
-    path: '/',
-    domain: COOKIE_DOMAIN,
-    maxAge,
-  }
-}
 
 const toAllowedRedirect = (candidate: string | null, fallback: string): string =>
   resolveRedirect(candidate, ALLOWED_REDIRECT_ORIGINS, fallback)
@@ -101,25 +94,6 @@ function redirectBackWithError(
   const target = new URL(back)
   target.searchParams.set('error', code)
   return redirect(target.toString(), headers)
-}
-
-function persistSession(
-  headers: Headers,
-  tokens: { accessToken: string; refreshToken: string },
-  tokenPolicy: TokenPolicy,
-): void {
-  setCookie(headers, ACCESS_COOKIE, tokens.accessToken, cookieOptions(tokenPolicy.accessTokenTtl))
-  setCookie(
-    headers,
-    REFRESH_COOKIE,
-    tokens.refreshToken,
-    cookieOptions(tokenPolicy.refreshTokenTtl),
-  )
-}
-
-function clearSession(headers: Headers): void {
-  deleteCookie(headers, ACCESS_COOKIE, { path: '/', domain: COOKIE_DOMAIN })
-  deleteCookie(headers, REFRESH_COOKIE, { path: '/', domain: COOKIE_DOMAIN })
 }
 
 function withCookieSession(request: Request, base: InitialContext): InitialContext {
@@ -187,16 +161,13 @@ async function submitCredentials(
     : await call(router.auth.signInPassword, { email, password, humanVerification }, { context })
 }
 
-async function handleCredentialSubmission(
-  action: 'sign-up' | 'sign-in',
+function landAuthResult(
+  result: AuthResult,
   request: Request,
   form: FormData,
   headers: Headers,
-  context: InitialContext,
   tokenPolicy: TokenPolicy,
-): Promise<Response> {
-  const result = await submitCredentials(action, form, context)
-
+): Response {
   if (result.status === 'mfa_required') {
     setCookie(
       headers,
@@ -218,6 +189,18 @@ async function handleCredentialSubmission(
   return redirect(toAllowedRedirect(field(form, 'redirect_to'), config.issuer), headers)
 }
 
+async function handleCredentialSubmission(
+  action: 'sign-up' | 'sign-in',
+  request: Request,
+  form: FormData,
+  headers: Headers,
+  context: InitialContext,
+  tokenPolicy: TokenPolicy,
+): Promise<Response> {
+  const result = await submitCredentials(action, form, context)
+  return landAuthResult(result, request, form, headers, tokenPolicy)
+}
+
 async function handleSignOut(
   form: FormData,
   headers: Headers,
@@ -226,6 +209,74 @@ async function handleSignOut(
   await call(router.auth.signOut, { scope: 'local' }, { context })
   clearSession(headers)
   return redirect(toAllowedRedirect(field(form, 'redirect_to'), config.issuer), headers)
+}
+
+function allowCredentialedOrigin(request: Request, headers: Headers): void {
+  const origin = request.headers.get('origin')
+  if (!origin || !ALLOWED_FORM_ORIGINS.includes(origin)) return
+
+  headers.set('access-control-allow-origin', origin)
+  headers.set('access-control-allow-credentials', 'true')
+  headers.append('vary', 'origin')
+}
+
+/** Opens a social sign-in whose session lands in `HttpOnly` cookies, not a URL code. */
+async function handleOAuthStart(
+  form: FormData,
+  headers: Headers,
+  context: InitialContext,
+): Promise<Response> {
+  const { authorizationUrl, state } = await call(
+    router.auth.oauthStart,
+    { provider: field(form, 'provider'), redirectTo: field(form, 'redirect_to') || undefined },
+    { context },
+  )
+
+  await context.db.execute(sql`
+    update auth.flow_state set session_sink = 'cookie' where state_hash = ${await sha256Hex(state)}
+  `)
+
+  return redirect(authorizationUrl, headers)
+}
+
+async function handleSignedPayload(
+  request: Request,
+  form: FormData,
+  headers: Headers,
+  context: InitialContext,
+  tokenPolicy: TokenPolicy,
+): Promise<Response> {
+  const result = await call(
+    router.auth.verifySignedPayload,
+    { provider: field(form, 'provider') || 'telegram', payload: field(form, 'payload') },
+    { context },
+  )
+
+  return landAuthResult(result, request, form, headers, tokenPolicy)
+}
+
+/** Rotates the session from the `gk_rt` cookie alone; the refresh token never reaches a client. */
+async function handleRefresh(
+  request: Request,
+  headers: Headers,
+  context: InitialContext,
+  tokenPolicy: TokenPolicy,
+): Promise<Response> {
+  const refreshToken = readRefreshCookie(request.headers)
+
+  if (refreshToken) {
+    try {
+      persistSession(
+        headers,
+        await call(router.auth.refresh, { refreshToken }, { context }),
+        tokenPolicy,
+      )
+    } catch {
+      clearSession(headers)
+    }
+  }
+
+  return new Response(null, { status: STATUS_NO_CONTENT, headers })
 }
 
 export async function handleForm(
@@ -247,6 +298,7 @@ export async function handleForm(
   const action = pathname.slice(FORM_PREFIX.length)
   const form = await request.formData()
   const headers = new Headers()
+  allowCredentialedOrigin(request, headers)
 
   const originVerdict = classifySubmittingOrigin(request)
   if (originVerdict === 'forged') {
@@ -275,6 +327,12 @@ export async function handleForm(
         )
       case 'sign-out':
         return await handleSignOut(form, headers, withCookieSession(request, context))
+      case 'oauth-start':
+        return await handleOAuthStart(form, headers, context)
+      case 'signed-payload':
+        return await handleSignedPayload(request, form, headers, context, realm.settings.tokens)
+      case 'refresh':
+        return await handleRefresh(request, headers, context, realm.settings.tokens)
       case 'profile':
         return await handleProfileUpdate(request, form, headers, context)
       default:

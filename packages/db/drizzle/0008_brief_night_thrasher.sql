@@ -1,0 +1,1 @@
+ALTER TABLE "auth"."flow_state" ADD COLUMN "session_sink" text;

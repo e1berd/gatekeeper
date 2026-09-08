@@ -1,12 +1,13 @@
 import type { Config } from 'npm:drizzle-kit@0.31.10'
 import { parse as parseYaml } from '@std/yaml'
 import * as z from 'zod'
+import { expandEnv } from './src/env.ts'
 
 const DatabaseConfig = z.object({
   database: z.object({ url: z.string().min(1) }),
 })
 
-const yaml = Deno.readTextFileSync('gatekeeper.yaml')
+const yaml = expandEnv(Deno.readTextFileSync('gatekeeper.yaml'))
 const databaseUrl = DatabaseConfig.parse(parseYaml(yaml)).database.url
 
 export default {

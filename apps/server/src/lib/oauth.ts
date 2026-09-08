@@ -47,6 +47,8 @@ export function resolveProvider(deps: OAuthDeps, slug: string): ResolvedProvider
 export const callbackUrl = (deps: OAuthDeps, slug: string) =>
   new URL(`/oauth/${slug}/callback`, deps.issuer).toString()
 
+export type SessionSink = 'token' | 'cookie'
+
 export type FlowRow = {
   id: string
   realm_id: string
@@ -55,11 +57,12 @@ export type FlowRow = {
   provider_type: string
   provider_verifier_encrypted: string | null
   redirect_to: string | null
+  session_sink: string | null
 }
 
 const FLOW_COLUMNS = sql`
   id, realm_id, user_id, code_challenge, provider_type,
-  provider_verifier_encrypted, redirect_to
+  provider_verifier_encrypted, redirect_to, session_sink
 `
 
 /**
@@ -135,12 +138,16 @@ export async function beginOAuth(
   return { authorizationUrl: url.toString(), state: state.token }
 }
 
-/** Where the browser is sent once the provider leg finishes, carrying our own code. */
+/**
+ * Records the authorization code for {@link exchangeAuthorizationCode} and works
+ * out where to send the browser next. `location` carries the code for a `token`
+ * flow; a `cookie` flow keeps it out of the URL and redeems `code` server-side.
+ */
 export async function issueAuthorizationCode(
   deps: OAuthDeps,
   row: FlowRow,
   userId: string,
-): Promise<string> {
+): Promise<{ code: string; location: string }> {
   const code = await createOpaqueToken()
   const expiresAt = new Date(Date.now() + AUTHORIZATION_CODE_TTL_SECONDS * 1000)
 
@@ -155,9 +162,9 @@ export async function issueAuthorizationCode(
   const target = new URL(
     toAllowedRedirect(row.redirect_to, deps.allowedRedirectOrigins, deps.issuer),
   )
-  target.searchParams.set('code', code.token)
+  if (row.session_sink !== 'cookie') target.searchParams.set('code', code.token)
 
-  return target.toString()
+  return { code: code.token, location: target.toString() }
 }
 
 /**

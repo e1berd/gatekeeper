@@ -9,6 +9,7 @@ import {
   type OAuthDeps,
   type ResolvedProvider,
   resolveProvider,
+  type SessionSink,
 } from './oauth.ts'
 
 const TOKEN_EXCHANGE_TIMEOUT_MS = 8_000
@@ -41,15 +42,17 @@ async function redeemProviderCode(
 }
 
 /**
- * The provider leg, reached by the browser rather than by a client. Returns the
- * URL to send it on to, already carrying Gatekeeper's own authorization code.
+ * The provider leg, reached by the browser rather than by a client. Returns
+ * where to send the browser next, plus the authorization `code` and the
+ * `sessionSink` the caller opened the flow with — `cookie` means the caller
+ * redeems `code` itself and sets the session cookies before redirecting.
  */
 export async function completeOAuthCallback(
   deps: OAuthDeps,
   slug: string,
   code: string,
   state: string,
-): Promise<string> {
+): Promise<{ code: string; location: string; sessionSink: SessionSink }> {
   const resolved = resolveProvider(deps, slug)
   const row: FlowRow | undefined = await claimState(deps.db, state)
 
@@ -61,6 +64,7 @@ export async function completeOAuthCallback(
   const accessToken = await redeemProviderCode(deps, resolved, code, verifier)
   const profile = await resolved.provider.fetchProfile(accessToken)
   const userId = await resolveUser(deps.db, row.realm_id, slug, profile)
+  const issued = await issueAuthorizationCode(deps, row, userId)
 
-  return await issueAuthorizationCode(deps, row, userId)
+  return { ...issued, sessionSink: row.session_sink === 'cookie' ? 'cookie' : 'token' }
 }

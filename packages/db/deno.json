@@ -1,5 +1,10 @@
 {
   "name": "@gatekeeper/db",
   "version": "0.1.0",
-  "exports": { ".": "./src/mod.ts", "./schema": "./src/schema/mod.ts" }
+  "exports": {
+    ".": "./src/mod.ts",
+    "./schema": "./src/schema/mod.ts",
+    "./migrate": "./src/migrate.ts",
+    "./env": "./src/env.ts"
+  }
 }

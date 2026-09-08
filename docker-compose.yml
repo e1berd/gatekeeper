@@ -43,25 +43,6 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # One-shot: brings the schema up to date, then exits. The API waits for it.
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: [
-      'deno',
-      'run',
-      '--allow-net',
-      '--allow-read',
-      'packages/db/src/migrate.ts',
-    ]
-    volumes:
-      - ./gatekeeper.yaml:/app/gatekeeper.yaml:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: 'no'
-
   gatekeeper:
     build:
       context: .
@@ -75,8 +56,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     healthcheck:
       test: ['CMD', 'deno', 'eval', "await fetch('http://localhost:8080/healthz')"]
       interval: 10s

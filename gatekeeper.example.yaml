@@ -4,6 +4,8 @@ server:
   logLevel: info
   version: 0.1.0
 
+# Any value may reference the environment as ${VAR} or ${VAR:-default}. A host
+# application that shares its Postgres with Gatekeeper sets database.url that way.
 database:
   url: postgres://gatekeeper:gatekeeper@postgres:5432/gatekeeper
   poolMax: 10
