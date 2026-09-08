@@ -11,12 +11,15 @@ Only `POST` is accepted; any other method returns `405`. Every response is a red
 
 ## Endpoints
 
-| Endpoint              | Effect                                           |
-| --------------------- | ------------------------------------------------ |
-| `POST /form/sign-up`  | Create a password identity, then sign in         |
-| `POST /form/sign-in`  | Sign in with an existing password                |
-| `POST /form/sign-out` | Revoke the current session and clear its cookies |
-| `POST /form/profile`  | Edit the signed-in user's own profile and avatar |
+| Endpoint                    | Effect                                                             |
+| --------------------------- | ------------------------------------------------------------------ |
+| `POST /form/sign-up`        | Create a password identity, then sign in                           |
+| `POST /form/sign-in`        | Sign in with an existing password                                  |
+| `POST /form/oauth-start`    | Begin a social sign-in whose session lands in cookies              |
+| `POST /form/signed-payload` | Exchange a provider-signed `payload` (e.g. Telegram) for a session |
+| `POST /form/refresh`        | Rotate the session from the `gk_rt` cookie; replies `204`          |
+| `POST /form/sign-out`       | Revoke the current session and clear its cookies                   |
+| `POST /form/profile`        | Edit the signed-in user's own profile and avatar                   |
 
 Any other path under `/form/` returns `404`. The `verify-email`, `reset-password`,
 `accept-invitation`, and `mfa-challenge` endpoints are planned (M8) and not routed yet.

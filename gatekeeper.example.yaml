@@ -19,6 +19,8 @@ security:
 
 browser:
   cookieDomain: null
+  # 'none' (with HTTPS) when the app is embedded third-party, e.g. a Telegram Mini App
+  cookieSameSite: lax
   allowedRedirectOrigins:
     - http://localhost:3000
     - http://localhost:8080

@@ -6,14 +6,14 @@ export const ACCESS_COOKIE = 'gk_at'
 export const REFRESH_COOKIE = 'gk_rt'
 
 const COOKIE_DOMAIN = config.browser.cookieDomain ?? undefined
-const COOKIES_REQUIRE_HTTPS = config.issuer.startsWith('https://')
-const SAME_SITE_THAT_SURVIVES_IDP_REDIRECT = 'lax' as const
+const SAME_SITE = config.browser.cookieSameSite
+const SECURE = config.issuer.startsWith('https://') || SAME_SITE === 'none'
 
 export function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    secure: COOKIES_REQUIRE_HTTPS,
-    sameSite: SAME_SITE_THAT_SURVIVES_IDP_REDIRECT,
+    secure: SECURE,
+    sameSite: SAME_SITE,
     path: '/',
     domain: COOKIE_DOMAIN,
     maxAge,

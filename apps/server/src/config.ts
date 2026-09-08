@@ -24,6 +24,7 @@ const SecurityConfig = z.strictObject({
 
 const BrowserConfig = z.strictObject({
   cookieDomain: z.string().min(1).nullable().default(null),
+  cookieSameSite: z.enum(['lax', 'none']).default('lax'),
   allowedRedirectOrigins: z.array(z.url()).optional(),
   allowedFormOrigins: z.array(z.url()).optional(),
   corsAllowedOrigins: z.array(z.url()).optional(),
@@ -133,6 +134,7 @@ function normalizeConfig(parsed: ParsedConfig) {
     signingKey: parsed.security.signingKey,
     browser: {
       cookieDomain: parsed.browser.cookieDomain,
+      cookieSameSite: parsed.browser.cookieSameSite,
       allowedRedirectOrigins: parsed.browser.allowedRedirectOrigins ?? [issuerOrigin],
       allowedFormOrigins: parsed.browser.allowedFormOrigins ?? [issuerOrigin],
       corsAllowedOrigins: parsed.browser.corsAllowedOrigins ?? [issuerOrigin],
